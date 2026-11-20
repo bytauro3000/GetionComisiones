@@ -15,6 +15,7 @@ import com.Inmobiliaria.demo.dto.LetraCambioDTO;
 import com.Inmobiliaria.demo.dto.ReporteCronogramaPagosClientesDTO;
 import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
 import com.Inmobiliaria.demo.enums.AccionAuditoria;
+import com.Inmobiliaria.demo.service.ActualizacionService;
 import com.Inmobiliaria.demo.service.LetraCambioService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class LetrasCambioController {
 
     private final LetraCambioService letraCambioService;
+    private final ActualizacionService actualizacionService;
 
     // ── Listar letras por contrato ────────────────────────────────────────────
     @GetMapping("/listar/{idContrato}")
@@ -41,6 +43,7 @@ public class LetrasCambioController {
             @PathVariable Integer idContrato,
             @RequestBody GenerarLetrasRequest request) {
         letraCambioService.generarLetrasDesdeContrato(idContrato, request);
+        actualizacionService.publicar("letra", "creado", idContrato);
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
@@ -51,6 +54,7 @@ public class LetrasCambioController {
             @PathVariable Integer idLetra,
             @RequestBody LetraCambioDTO letraCambioDTO) {
         LetraCambioDTO letraActualizada = letraCambioService.actualizarLetra(idLetra, letraCambioDTO);
+        actualizacionService.publicar("letra", "actualizado", idLetra);
         return new ResponseEntity<>(letraActualizada, HttpStatus.OK);
     }
 
@@ -59,6 +63,7 @@ public class LetrasCambioController {
     @DeleteMapping("/eliminar/{idContrato}")
     public ResponseEntity<Void> eliminarPorContrato(@PathVariable Integer idContrato) {
         letraCambioService.eliminarPorContrato(idContrato);
+        actualizacionService.publicar("letra", "eliminado", idContrato);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 

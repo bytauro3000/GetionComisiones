@@ -16,6 +16,7 @@ import com.Inmobiliaria.demo.dto.ContratoListItemDTO;
 import com.Inmobiliaria.demo.dto.LotesVendidosResponseDTO;
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
 import com.Inmobiliaria.demo.enums.AccionAuditoria;
+import com.Inmobiliaria.demo.service.ActualizacionService;
 import com.Inmobiliaria.demo.service.ContratoService;
 
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class ContratoController {
 
     private final ContratoService contratoService;
     private final ContratoEstadoScheduler contratoEstadoScheduler;
+    private final ActualizacionService actualizacionService;
 
     @Auditable(accion = AccionAuditoria.CREAR, entidad = "Contrato")
     @PostMapping("/agregar")
@@ -37,6 +39,7 @@ public class ContratoController {
         Principal principal
     ) {
         ContratoResponseDTO contratoGuardado = contratoService.guardarContrato(requestDTO, principal);
+        actualizacionService.publicar("contrato", "creado", contratoGuardado.getIdContrato());
         return new ResponseEntity<>(contratoGuardado, HttpStatus.CREATED);
     }
 
@@ -47,6 +50,7 @@ public class ContratoController {
         @Valid @RequestBody ContratoRequestDTO requestDTO
     ) {
         ContratoResponseDTO actualizado = contratoService.actualizarContrato(id, requestDTO);
+        actualizacionService.publicar("contrato", "actualizado", id);
         return new ResponseEntity<>(actualizado, HttpStatus.OK);
     }
 
@@ -108,6 +112,7 @@ public class ContratoController {
     @PreAuthorize("hasAuthority('ROLE_SOPORTE')")
     public void eliminarContrato(@PathVariable Integer id) {
         contratoService.eliminarContrato(id);
+        actualizacionService.publicar("contrato", "eliminado", id);
     }
 
     
@@ -122,6 +127,7 @@ public class ContratoController {
             @PathVariable Integer id,
             @RequestParam String estado) {
         ContratoResponseDTO actualizado = contratoService.cambiarEstado(id, estado);
+        actualizacionService.publicar("contrato", "estado", id);
         return ResponseEntity.ok(actualizado);
     }
 
@@ -129,6 +135,7 @@ public class ContratoController {
     @PatchMapping("/{id}/renuncia")
     public ResponseEntity<ContratoResponseDTO> registrarRenuncia(@PathVariable Integer id) {
         ContratoResponseDTO resultado = contratoService.registrarRenuncia(id);
+        actualizacionService.publicar("contrato", "renuncia", id);
         return ResponseEntity.ok(resultado);
     }
 
@@ -136,6 +143,7 @@ public class ContratoController {
     @PatchMapping("/{id}/transferencia")
     public ResponseEntity<TransferenciaResponseDTO> registrarTransferencia(@PathVariable Integer id) {
         TransferenciaResponseDTO datos = contratoService.registrarTransferencia(id);
+        actualizacionService.publicar("contrato", "transferencia", id);
         return ResponseEntity.ok(datos);
     }
 

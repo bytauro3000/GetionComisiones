@@ -20,6 +20,7 @@ import com.Inmobiliaria.demo.dto.LoteRequestDTO;
 import com.Inmobiliaria.demo.dto.LoteResponseDTO;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.Lote;
+import com.Inmobiliaria.demo.service.ActualizacionService;
 import com.Inmobiliaria.demo.service.LoteService;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.ProgramaRepository;
@@ -37,6 +38,7 @@ public class LoteController {
     private final ProgramaRepository programaRepository;
     private final ContratoRepository contratoRepository;
     private final ModelMapper modelMapper;
+    private final ActualizacionService actualizacionService;
 
     @GetMapping
     public ResponseEntity<List<LoteResponseDTO>> listarLotes() {
@@ -74,7 +76,9 @@ public class LoteController {
         Lote lote = toEntity(dto);
         lote.setIdLote(id);
         Lote actualizado = loteService.actualizarLote(lote);
-        return (actualizado != null) ? ResponseEntity.ok(toResponseDTO(actualizado)) : ResponseEntity.badRequest().build();
+        if (actualizado == null) return ResponseEntity.badRequest().build();
+        actualizacionService.publicar("lote", "actualizado", id);
+        return ResponseEntity.ok(toResponseDTO(actualizado));
     }
 
     @PostMapping
@@ -82,6 +86,7 @@ public class LoteController {
         try {
             Lote lote = toEntity(dto);
             Lote nuevo = loteService.crearLote(lote);
+            actualizacionService.publicar("lote", "creado", nuevo.getIdLote());
             return ResponseEntity.ok(toResponseDTO(nuevo));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -91,6 +96,7 @@ public class LoteController {
     @DeleteMapping("/{id}")
     public void eliminarLote(@PathVariable Integer id) {
         loteService.eliminarLote(id);
+        actualizacionService.publicar("lote", "eliminado", id);
     }
 
     @GetMapping("/gestion/programa/{idPrograma}")

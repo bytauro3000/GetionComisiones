@@ -16,6 +16,7 @@ import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.UsuarioRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
+import com.Inmobiliaria.demo.service.ActualizacionService;
 import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
@@ -59,6 +60,7 @@ public class PagoLetraController {
     private final ComprobanteService   comprobanteService;
     private final ComprobanteRepository comprobanteRepository;
     private final EmpresaService       empresaService;
+    private final ActualizacionService actualizacionService;
 
     // ── Lectura básica ────────────────────────────────────────────────────────
 
@@ -89,6 +91,7 @@ public class PagoLetraController {
             @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
             throws IOException {
         PagoLetraResponseDTO response = pagoLetraService.registrarPago(request, vouchers);
+        actualizacionService.publicar("pago", "creado", response.getIdPago());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -99,6 +102,7 @@ public class PagoLetraController {
             @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
             throws IOException {
         Map<String, Object> resultado = pagoLetraService.registrarPagosMultiples(request, vouchers);
+        actualizacionService.publicar("pago", "creado-multiple", null);
         return new ResponseEntity<>(resultado, HttpStatus.CREATED);
     }
 
@@ -110,6 +114,7 @@ public class PagoLetraController {
             @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
             throws IOException {
         PagoLetraResponseDTO response = pagoLetraService.actualizarPago(idPago, request, vouchers);
+        actualizacionService.publicar("pago", "actualizado", idPago);
         return ResponseEntity.ok(response);
     }
 
@@ -455,6 +460,7 @@ public class PagoLetraController {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("mensaje", "Pago anulado correctamente. Letra restaurada y moras canceladas.");
+        actualizacionService.publicar("pago", "anulado", idPago);
         return ResponseEntity.ok(result);
     }
 
@@ -466,6 +472,7 @@ public class PagoLetraController {
     public ResponseEntity<Void> eliminarPago(
             @PathVariable Integer idPago) throws IOException {
         pagoLetraService.eliminarPago(idPago);
+        actualizacionService.publicar("pago", "eliminado", idPago);
         return ResponseEntity.noContent().build();
     }
 

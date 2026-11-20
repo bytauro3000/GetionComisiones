@@ -526,17 +526,24 @@ PagoInscripcionComprobante pagoGuardado =
 
 	            // Crear NC interna para comprobantes no SUNAT
 	            Comprobante orig = pago.getComprobante();
+	            String motivoMicroservicio = request.getMotivo();
 	            if (orig != null && orig.getSerie() != null && !orig.getSerie().startsWith("B")) {
 	                Comprobante nc = comprobanteService.generarNotaCredito(
 	                        orig, "01", request.getMotivo(), authentication.getName());
 	                orig.setIdNotaCreditoAnulacion(nc.getIdComprobante());
 	                comprobanteRepository.save(orig);
+	                motivoMicroservicio = "NC " + nc.getNumeroCompleto() + " - " + request.getMotivo();
 	            }
-	
+
+	            // Anular también en el microservicio de servicios básicos: recalcula el
+	            // saldo acumulado y, si quedó en 0, cancela la inscripción para que el
+	            // servicio vuelva a estar disponible (mismo comportamiento que por NC).
+	            anularAbonoEnMicroservicio(pago, motivoMicroservicio);
+
 	            return ResponseEntity.ok(Map.of(
 	                    "mensaje", "Pago de inscripción anulado correctamente.",
 	                    "idPago",  idPago));
-	
+
 	        } catch (NegocioException e) {
 	            return ResponseEntity.badRequest().body(e.getMessage());
 	        } catch (Exception e) {
@@ -544,6 +551,32 @@ PagoInscripcionComprobante pagoGuardado =
 	                    .body("Error al anular el pago de inscripción.");
 	        }
 	    }
+
+    /**
+     * Anula el abono en el microservicio de servicios básicos (Feign).
+     * Si falla, se lanza excepción para que @Transactional revierta la anulación local,
+     * evitando inconsistencia entre el monolito y el microservicio.
+     */
+    private void anularAbonoEnMicroservicio(PagoInscripcionComprobante pago, String motivo) {
+        if (pago.getIdPagoInscripcionMs() == null) {
+            throw new NegocioException(
+                "No se puede anular: el pago " + pago.getIdPagoInscripcionComprobante() +
+                " no tiene referencia al microservicio de servicios básicos.");
+        }
+        try {
+            inscripcionClient.anularAbono(
+                    pago.getIdInscripcionServicio(),
+                    pago.getIdPagoInscripcionMs(),
+                    Map.of("motivo", motivo));
+            log.info("Abono de inscripción {} anulado en el microservicio (inscripción {}, pago ms {}).",
+                    pago.getIdPagoInscripcionComprobante(), pago.getIdInscripcionServicio(), pago.getIdPagoInscripcionMs());
+        } catch (FeignException e) {
+            log.error("No se pudo anular el abono {} en el microservicio: {}",
+                    pago.getIdPagoInscripcionComprobante(), e.getMessage());
+            throw new NegocioException(
+                "Error al anular en el microservicio de servicios básicos: " + e.getMessage());
+        }
+    }
 	
 	    // ── Helper: mapper privado reutilizable ───────────────────────────────────
 	

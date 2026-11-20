@@ -10,6 +10,7 @@ import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoMoraRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
+import com.Inmobiliaria.demo.service.ActualizacionService;
 import com.Inmobiliaria.demo.service.MoraService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobanteMoraPdf;
@@ -44,6 +45,7 @@ public class MoraController {
     private final PagoMoraRepository   pagoMoraRepository;
     private final PagoLetraService     pagoLetraService;
     private final VoucherRepository    voucherRepository;
+    private final ActualizacionService actualizacionService;
 
     // ── Consultas ─────────────────────────────────────────────────────────────
 
@@ -90,7 +92,9 @@ public class MoraController {
     @PostMapping("/crear-pendiente/{idLetra}")
     public ResponseEntity<MoraResponseDTO> crearMoraPendiente(
             @PathVariable Integer idLetra) {
-        return new ResponseEntity<>(moraService.crearMoraPendiente(idLetra), HttpStatus.CREATED);
+        MoraResponseDTO mora = moraService.crearMoraPendiente(idLetra);
+        actualizacionService.publicar("mora", "creado", mora.getIdMora());
+        return new ResponseEntity<>(mora, HttpStatus.CREATED);
     }
 
     @GetMapping("/contrato/{idContrato}/resumen")
@@ -107,7 +111,9 @@ public class MoraController {
             @RequestPart("pago") PagoMoraRequestDTO request,
             @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
             throws java.io.IOException {
-        return new ResponseEntity<>(moraService.pagarMora(request, vouchers), HttpStatus.CREATED);
+        PagoMoraResponseDTO pago = moraService.pagarMora(request, vouchers);
+        actualizacionService.publicar("mora", "pagado", pago.getIdMora());
+        return new ResponseEntity<>(pago, HttpStatus.CREATED);
     }
 
     @Auditable(accion = AccionAuditoria.PAGAR, entidad = "PagoMora")
@@ -116,8 +122,10 @@ public class MoraController {
             @RequestPart("pago") MoraPagosMultiplesRequestDTO request,
             @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
             throws java.io.IOException {
-        return new ResponseEntity<>(
-                moraService.pagarMorasMultiples(request, vouchers), HttpStatus.CREATED);
+        Map<String, Object> resultado = moraService.pagarMorasMultiples(request, vouchers);
+        actualizacionService.publicar("mora", "pagado-multiple", request.getPagos() != null
+                && !request.getPagos().isEmpty() ? request.getPagos().get(0).getIdMora() : null);
+        return new ResponseEntity<>(resultado, HttpStatus.CREATED);
     }
 
     @GetMapping("/pago/{idPagoMora}/comprobante-pdf")
@@ -233,8 +241,9 @@ public class MoraController {
             @PathVariable Integer idMora,
             @Valid @RequestBody AnulacionRequestDTO request,
             Authentication authentication) {
-        return ResponseEntity.ok(
-            moraService.anularMora(idMora, request.getMotivo(), authentication.getName()));
+        MoraResponseDTO mora = moraService.anularMora(idMora, request.getMotivo(), authentication.getName());
+        actualizacionService.publicar("mora", "anulado", idMora);
+        return ResponseEntity.ok(mora);
     }
 
     // ── ADMIN: Anular pago de mora ────────────────────────────────────────────
@@ -246,8 +255,9 @@ public class MoraController {
             @PathVariable Integer idPagoMora,
             @Valid @RequestBody AnulacionRequestDTO request,
             Authentication authentication) {
-        return ResponseEntity.ok(
-            moraService.anularPagoMora(idPagoMora, request.getMotivo(), authentication.getName()));
+        PagoMoraResponseDTO pago = moraService.anularPagoMora(idPagoMora, request.getMotivo(), authentication.getName());
+        actualizacionService.publicar("mora", "pago-anulado", idPagoMora);
+        return ResponseEntity.ok(pago);
     }
 
     // ── ADMIN: Eliminar pago de mora físicamente ──────────────────────────────
@@ -257,6 +267,7 @@ public class MoraController {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_SOPORTE')")
     public ResponseEntity<Void> eliminarPagoMora(@PathVariable Integer idPagoMora) {
         moraService.eliminarPagoMora(idPagoMora);
+        actualizacionService.publicar("mora", "pago-eliminado", idPagoMora);
         return ResponseEntity.noContent().build();
     }
 

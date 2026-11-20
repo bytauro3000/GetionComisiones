@@ -10,6 +10,7 @@ import com.Inmobiliaria.demo.dto.SeparacionDTO;
 import com.Inmobiliaria.demo.dto.SeparacionResumenDTO;
 import com.Inmobiliaria.demo.entity.Separacion;
 import com.Inmobiliaria.demo.entity.Vendedor;
+import com.Inmobiliaria.demo.service.ActualizacionService;
 import com.Inmobiliaria.demo.service.SeparacionService;
 import com.Inmobiliaria.demo.service.UsuarioService;
 import com.Inmobiliaria.demo.service.VendedorService;
@@ -25,6 +26,7 @@ public class SeparacionController {
     private final SeparacionService separacionService;
     private final VendedorService vendedorService;
     private final UsuarioService usuarioService;
+    private final ActualizacionService actualizacionService;
 
     // Búsqueda para autocompletado: el Repositorio ahora usa DISTINCT para evitar duplicados
     @GetMapping(value = "/buscar", produces = MediaType.APPLICATION_JSON_VALUE) 
@@ -66,6 +68,7 @@ public class SeparacionController {
     public ResponseEntity<?> crearSeparacion(@RequestBody Separacion sepa) {
         try {
             Separacion nueva = separacionService.crearSeparacion(sepa);
+            actualizacionService.publicar("separacion", "creada", nueva.getIdSeparacion());
             return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -79,6 +82,7 @@ public class SeparacionController {
             sepa.setIdSeparacion(id);
             Separacion actualizada = separacionService.actualizarSeparacion(sepa);
             if (actualizada == null) return ResponseEntity.notFound().build();
+            actualizacionService.publicar("separacion", "actualizada", id);
             return ResponseEntity.ok(actualizada);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -90,6 +94,7 @@ public class SeparacionController {
     public ResponseEntity<?> eliminarSeparacion(@PathVariable Integer id) {
         try {
             separacionService.eliminarSeparacion(id);
+            actualizacionService.publicar("separacion", "eliminada", id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

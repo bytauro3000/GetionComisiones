@@ -1,8 +1,8 @@
 {"properties": [
   {
-    "name": "springdoc.swagger-ui.path",
+    "name": "spring.datasource.hikari.connection-timezone",
     "type": "java.lang.String",
-    "description": "A description for 'springdoc.swagger-ui.path'"
+    "description": "A description for 'spring.datasource.hikari.connection-timezone'"
   },
   {
     "name": "jwt.secret-key",
@@ -10,74 +10,9 @@
     "description": "A description for 'jwt.secret-key'"
   },
   {
-    "name": "cloudinary.cloud_name",
+    "name": "jwt.refresh-expiration",
     "type": "java.lang.String",
-    "description": "A description for 'cloudinary.cloud_name'"
-  },
-  {
-    "name": "cloudinary.api_key",
-    "type": "java.lang.String",
-    "description": "A description for 'cloudinary.api_key'"
-  },
-  {
-    "name": "cloudinary.api_secret",
-    "type": "java.lang.String",
-    "description": "A description for 'cloudinary.api_secret'"
-  },
-  {
-    "name": "gateway.secret-key",
-    "type": "java.lang.String",
-    "description": "A description for 'gateway.secret-key'"
-  },
-  {
-    "name": "exchangerate.api-key",
-    "type": "java.lang.String",
-    "description": "A description for 'exchangerate.api-key'"
-  },
-  {
-    "name": "microservice.servicios-basicos.url",
-    "type": "java.lang.String",
-    "description": "A description for 'microservice.servicios-basicos.url'"
-  },
-  {
-    "name": "decolecta.api.token",
-    "type": "java.lang.String",
-    "description": "A description for 'decolecta.api.token'"
-  },
-  {
-    "name": "decolecta.api.url",
-    "type": "java.lang.String",
-    "description": "A description for 'decolecta.api.url'"
-  },
-  {
-    "name": "sunat.soap.url",
-    "type": "java.lang.String",
-    "description": "A description for 'sunat.soap.url'"
-  },
-  {
-    "name": "apisperu.base-url",
-    "type": "java.lang.String",
-    "description": "A description for 'apisperu.base-url'"
-  },
-  {
-    "name": "apisperu.company-token",
-    "type": "java.lang.String",
-    "description": "A description for 'apisperu.company-token'"
-  },
-  {
-    "name": "apisperu.ruc",
-    "type": "java.lang.String",
-    "description": "A description for 'apisperu.ruc'"
-  },
-  {
-    "name": "apisperu.environment",
-    "type": "java.lang.String",
-    "description": "A description for 'apisperu.environment'"
-  },
-  {
-    "name": "app.pago.pin",
-    "type": "java.lang.String",
-    "description": "A description for 'app.pago.pin'"
+    "description": "A description for 'jwt.refresh-expiration'"
   },
   {
     "name": "jwt.cookie-secure",
@@ -90,43 +25,68 @@
     "description": "A description for 'jwt.cookie-same-site'"
   },
   {
-    "name": "spring.datasource.hikari.connection-timezone",
+    "name": "app.seed.admin-email",
     "type": "java.lang.String",
-    "description": "A description for 'spring.datasource.hikari.connection-timezone'"
+    "description": "A description for 'app.seed.admin-email'"
   },
   {
-    "name": "notificacion.admin.email",
+    "name": "app.cors.allowed-origins",
     "type": "java.lang.String",
-    "description": "A description for 'notificacion.admin.email'"
+    "description": "A description for 'app.cors.allowed-origins'"
   },
   {
-    "name": "gemini.api.key",
+    "name": "app.seed.admin-password",
     "type": "java.lang.String",
-    "description": "A description for 'gemini.api.key'"
+    "description": "A description for 'app.seed.admin-password'"
   },
   {
-    "name": "gemini.api.url",
+    "name": "decolecta.api.url",
     "type": "java.lang.String",
-    "description": "A description for 'gemini.api.url'"
+    "description": "A description for 'decolecta.api.url'"
   },
   {
-    "name": "apisunat.base-url",
+    "name": "decolecta.api.token",
     "type": "java.lang.String",
-    "description": "A description for 'apisunat.base-url'"
+    "description": "A description for 'decolecta.api.token'"
   },
   {
-    "name": "sunat.provider",
+    "name": "sunat.api.url",
     "type": "java.lang.String",
-    "description": "A description for 'sunat.provider'"
+    "description": "A description for 'sunat.api.url'"
   },
   {
-    "name": "apisunat.api-key",
+    "name": "app.uploads.dir",
     "type": "java.lang.String",
-    "description": "A description for 'apisunat.api-key'"
+    "description": "A description for 'app.uploads.dir'"
   },
   {
-    "name": "apisunat.api-secret",
+    "name": "cloudinary.cloud-name",
     "type": "java.lang.String",
-    "description": "A description for 'apisunat.api-secret'"
+    "description": "A description for 'cloudinary.cloud-name'"
+  },
+  {
+    "name": "cloudinary.api-key",
+    "type": "java.lang.String",
+    "description": "A description for 'cloudinary.api-key'"
+  },
+  {
+    "name": "cloudinary.api-secret",
+    "type": "java.lang.String",
+    "description": "A description for 'cloudinary.api-secret'"
+  },
+  {
+    "name": "app.seed.create-demo-vendedor",
+    "type": "java.lang.String",
+    "description": "A description for 'app.seed.create-demo-vendedor'"
+  },
+  {
+    "name": "app.seed.create-demo-vendedor",
+    "type": "java.lang.String",
+    "description": "A description for 'app.seed.create-demo-vendedor'"
+  },
+  {
+    "name": "secrets.encryption-key",
+    "type": "java.lang.String",
+    "description": "A description for 'secrets.encryption-key'"
   }
 ]}

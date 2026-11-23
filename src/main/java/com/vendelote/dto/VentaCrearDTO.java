@@ -47,4 +47,19 @@ public class VentaCrearDTO {
 
     @Size(max = 300)
     private String notas;
+
+    /**
+     * Override del % del INICIAL DEL CLIENTE que se paga como anticipo
+     * (ej. 0.30 = 30%). Si es null se usa el parámetro vigente.
+     */
+    @PositiveOrZero
+    private BigDecimal porcentajeAnticipo;
+
+    /** Override del monto de cada cuota (letra). Null = parámetro vigente. */
+    @PositiveOrZero
+    private BigDecimal montoCuota;
+
+    /** Reparto con socios (máximo 2: tú + 2 socios = 3 partes). */
+    @Size(max = 2, message = "Máximo 2 socios por comisión")
+    private List<ComisionRepartoSocioDTO> socios;
 }

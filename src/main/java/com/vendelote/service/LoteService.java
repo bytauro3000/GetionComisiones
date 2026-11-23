@@ -139,6 +139,8 @@ public class LoteService {
         lote.setFechaVinceSeparacion(dto.getFechaVence());
         lote.setMontoSeparacion(dto.getMonto());
         lote.setSeparacionAjena(dto.isAjena());
+        lote.setClienteSeparacion(limpiar(dto.getCliente()));
+        lote.setNotaSeparacion(limpiar(dto.getNota()));
         lote.setMotivoEstado(null);
         return loteRepository.save(lote);
     }
@@ -155,6 +157,8 @@ public class LoteService {
         lote.setFechaVinceSeparacion(null);
         lote.setMontoSeparacion(null);
         lote.setSeparacionAjena(false);
+        lote.setClienteSeparacion(null);
+        lote.setNotaSeparacion(null);
         lote.setMotivoEstado(null);
         return loteRepository.save(lote);
     }
@@ -196,6 +200,8 @@ public class LoteService {
             lote.setFechaVinceSeparacion(null);
             lote.setMontoSeparacion(null);
             lote.setSeparacionAjena(false);
+            lote.setClienteSeparacion(null);
+            lote.setNotaSeparacion(null);
         }
 
         lote.setEstado(nuevo);
@@ -263,5 +269,9 @@ public class LoteService {
         } catch (Exception e) {
             throw new NegocioException("Estado no válido: use DISPONIBLE, RESERVADO o VENDIDO");
         }
+    }
+
+    private String limpiar(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 }

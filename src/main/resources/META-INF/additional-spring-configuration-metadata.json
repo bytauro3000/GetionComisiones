@@ -88,5 +88,10 @@
     "name": "secrets.encryption-key",
     "type": "java.lang.String",
     "description": "A description for 'secrets.encryption-key'"
+  },
+  {
+    "name": "app.separaciones.expiracion-cron",
+    "type": "java.lang.String",
+    "description": "A description for 'app.separaciones.expiracion-cron'"
   }
 ]}

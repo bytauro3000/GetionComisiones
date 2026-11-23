@@ -57,8 +57,9 @@ import lombok.RequiredArgsConstructor;
  * - CONTADO: comisión total de una vez (pago tipo TOTAL en la fecha de venta);
  *   puede ser inferior al 3% → porcentaje_comision_contado o comisionManual.
  * - FINANCIADO: comisión = 3% × precio; anticipo = anticipoPorcentaje (30%)
- *   × comisión total (o monto fijo si está configurado); saldo en cuotas de
- *   $50 desde fechaVenta + meses_espera (8). La última cuota absorbe el residuo.
+ *   × INICIAL que pagó el cliente (o monto fijo si está configurado); saldo
+ *   en cuotas de $50 desde fechaVenta + meses_espera (8). La última cuota
+ *   absorbe el residuo.
  * - Si la empresa paga el anticipo días después, solo cambia la fechaPago
  *   real: la programación y el conteo de 8 meses no se mueven.
  */
@@ -77,6 +78,7 @@ public class VentaService {
     private final ParametroComisionService parametroService;
     private final LoteService loteService;
     private final ClienteService clienteService;
+    private final ComisionRepartoService repartoService;
 
     @Transactional(readOnly = true)
     public List<VentaListadoDTO> listar() {
@@ -216,7 +218,7 @@ public class VentaService {
 
         Venta guardada = ventaRepository.save(venta);
 
-        generarComisionConPagos(guardada, parametro, lotes.get(0).getId());
+        generarComisionConPagos(guardada, parametro, lotes.get(0).getId(), dto);
 
         for (Lote lote : lotes) {
             lote.setEstado(EstadoLote.VENDIDO);
@@ -275,7 +277,8 @@ public class VentaService {
 
     // ── Generación de comisión + pagos ─────────────────────────────────────────
 
-    private void generarComisionConPagos(Venta venta, ParametroComision parametro, Integer idPrimerLote) {
+    private void generarComisionConPagos(Venta venta, ParametroComision parametro,
+                                         Integer idPrimerLote, VentaCrearDTO dto) {
         boolean contado = venta.getModalidad() == ModalidadVenta.CONTADO;
         BigDecimal porcentaje = contado
                 ? parametro.getPorcentajeComisionContado()
@@ -291,6 +294,18 @@ public class VentaService {
             throw new NegocioException("La comisión no puede ser negativa");
         }
 
+        // Monto de cada letra (override por venta o parámetro).
+        BigDecimal montoCuota = dto.getMontoCuota() != null
+                ? dto.getMontoCuota()
+                : parametro.getMontoCuota();
+
+        // % del inicial del cliente aplicado al anticipo (override o parámetro).
+        BigDecimal porcentajeAnticipo = contado ? null
+                : (parametro.getAnticipoMontoFijo() != null ? null
+                        : (dto.getPorcentajeAnticipo() != null
+                                ? dto.getPorcentajeAnticipo()
+                                : parametro.getAnticipoPorcentaje()));
+
         Comision comision = new Comision();
         comision.setIdVendedor(venta.getIdVendedor());
         comision.setIdVenta(venta.getId());
@@ -299,24 +314,28 @@ public class VentaService {
         comision.setIdLote(idPrimerLote);
         comision.setPorcentajeAplicado(venta.getComisionManual() == null ? porcentaje : null);
         comision.setMontoTotal(total);
-        comision.setMontoCuota(parametro.getMontoCuota());
+        comision.setMontoCuota(montoCuota);
+        comision.setPorcentajeAnticipo(porcentajeAnticipo);
         comision.setFechaInicioCuotas(contado ? venta.getFechaVenta() : venta.getFechaInicioCuotas());
 
         List<PagoComision> pagos = new ArrayList<>();
+        BigDecimal inicialTotal;
 
         if (contado) {
             comision.setMontoAnticipo(BigDecimal.ZERO);
             comision.setMontoSaldo(BigDecimal.ZERO);
             comision.setCantidadCuotas(0);
             comision.setEstado(total.signum() == 0 ? EstadoComision.PAGADA : EstadoComision.PENDIENTE);
+            inicialTotal = total;
             if (total.signum() > 0) {
                 pagos.add(nuevoPago(venta, TipoPago.TOTAL, total, venta.getFechaVenta(), null));
             }
         } else {
-            BigDecimal anticipo = calcularAnticipo(venta, parametro, total);
+            BigDecimal anticipo = calcularAnticipo(venta, parametro, total, dto.getPorcentajeAnticipo());
             BigDecimal saldo = total.subtract(anticipo);
             comision.setMontoAnticipo(anticipo);
             comision.setMontoSaldo(saldo);
+            inicialTotal = anticipo;
             // Nace PENDIENTE: ningún pago está cobrado aún (el anticipo se cobra
             // después; el estado se recalcula en cada cobro/revertir).
             comision.setEstado(total.signum() == 0
@@ -326,17 +345,16 @@ public class VentaService {
                 pagos.add(nuevoPago(venta, TipoPago.ANTICIPO, anticipo, venta.getFechaVenta(), null));
             }
             if (saldo.signum() > 0) {
-                BigDecimal cuota = parametro.getMontoCuota();
-                if (cuota.signum() <= 0) {
+                if (montoCuota.signum() <= 0) {
                     throw new NegocioException("El monto de cuota debe ser mayor a 0");
                 }
-                int cantidad = saldo.divide(cuota, 0, RoundingMode.CEILING).intValue();
+                int cantidad = saldo.divide(montoCuota, 0, RoundingMode.CEILING).intValue();
                 comision.setCantidadCuotas(cantidad);
                 LocalDate inicio = venta.getFechaInicioCuotas();
                 for (int i = 1; i <= cantidad; i++) {
                     BigDecimal monto = (i < cantidad)
-                            ? cuota
-                            : saldo.subtract(cuota.multiply(BigDecimal.valueOf(cantidad - 1)));
+                            ? montoCuota
+                            : saldo.subtract(montoCuota.multiply(BigDecimal.valueOf(cantidad - 1)));
                     pagos.add(nuevoPago(venta, TipoPago.CUOTA, monto, inicio.plusMonths(i - 1), i));
                 }
             } else {
@@ -349,18 +367,30 @@ public class VentaService {
             pago.setIdComision(guardada.getId());
             pagoRepository.save(pago);
         }
+
+        // Reparto con socios (si se informó). En CONTADO el "inicial" es el TOTAL.
+        BigDecimal cuotaBase = guardada.getCantidadCuotas() != null && guardada.getCantidadCuotas() > 0
+                ? montoCuota : null;
+        repartoService.reemplazar(guardada, dto.getSocios(), inicialTotal, cuotaBase);
     }
 
     /**
-     * Anticipo de la comisión en FINANCIADO: anticipoPorcentaje × comisión total
-     * (default 30% → siempre deja saldo para cuotas). Un anticipoMontoFijo
-     * manual tiene prioridad y se acota al total.
+     * Anticipo de la comisión en FINANCIADO: % (override o parámetro) ×
+     * INICIAL que pagó el cliente, con tope en la comisión total.
+     * (Antes se calculaba sobre la comisión total; el negocio lo hace sobre la inicial.)
      */
-    private BigDecimal calcularAnticipo(Venta venta, ParametroComision parametro, BigDecimal total) {
-        BigDecimal anticipoBase = parametro.getAnticipoMontoFijo() != null
-                ? parametro.getAnticipoMontoFijo()
-                : total.multiply(parametro.getAnticipoPorcentaje())
-                        .setScale(2, RoundingMode.HALF_UP);
+    private BigDecimal calcularAnticipo(Venta venta, ParametroComision parametro,
+                                        BigDecimal total, BigDecimal porcentajeOverride) {
+        BigDecimal anticipoBase;
+        if (parametro.getAnticipoMontoFijo() != null) {
+            anticipoBase = parametro.getAnticipoMontoFijo();
+        } else {
+            BigDecimal pct = porcentajeOverride != null
+                    ? porcentajeOverride : parametro.getAnticipoPorcentaje();
+            BigDecimal base = venta.getMontoInicial() != null
+                    ? venta.getMontoInicial() : BigDecimal.ZERO;
+            anticipoBase = base.multiply(pct).setScale(2, RoundingMode.HALF_UP);
+        }
         if (anticipoBase.signum() < 0) {
             anticipoBase = BigDecimal.ZERO;
         }

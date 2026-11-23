@@ -20,5 +20,6 @@ bin/
 # ==== Logs y temporales ====
 *.log
 *.tmp
+.env
 .DS_Store
 Thumbs.db

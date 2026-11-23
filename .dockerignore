@@ -1,0 +1,14 @@
+target/
+.git/
+.gitignore
+.settings/
+.classpath
+.project
+.factorypath
+.idea/
+*.iml
+uploads/
+*.log
+.env
+.DS_Store
+Thumbs.db

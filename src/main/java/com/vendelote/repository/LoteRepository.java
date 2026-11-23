@@ -35,6 +35,10 @@ public interface LoteRepository extends JpaRepository<Lote, Integer> {
     /** Lotes en un estado cuya fecha de separación ya venció (job de expiración). */
     List<Lote> findByEstadoAndFechaVinceSeparacionBefore(EstadoLote estado, LocalDate fecha);
 
+    /** Separaciones propias que vencen en una fecha exacta (job de avisos). */
+    List<Lote> findByEstadoAndSeparacionAjenaFalseAndFechaVinceSeparacion(
+            EstadoLote estado, LocalDate fecha);
+
     /** Sincroniza el texto de proyecto en los lotes al renombrar el proyecto. */
     @Modifying
     @Query("UPDATE Lote l SET l.proyecto = :nombre WHERE l.idProyecto = :idProyecto")

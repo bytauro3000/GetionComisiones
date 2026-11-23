@@ -125,6 +125,14 @@ public class Lote implements TenantEntity {
     @Column(name = "separacion_ajena", nullable = false)
     private boolean separacionAjena = false;
 
+    /** Cliente con quien se separó el lote (opcional, informativo). */
+    @Column(name = "cliente_separacion", length = 150)
+    private String clienteSeparacion;
+
+    /** Nota libre de la separación (opcional). */
+    @Column(name = "nota_separacion", length = 300)
+    private String notaSeparacion;
+
     @CreationTimestamp
     @Column(name = "fecha_registro", nullable = false, updatable = false)
     private LocalDateTime fechaRegistro;

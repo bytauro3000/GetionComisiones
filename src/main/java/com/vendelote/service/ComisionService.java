@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vendelote.dto.CobrarPagosDTO;
 import com.vendelote.dto.ComisionListadoDTO;
+import com.vendelote.dto.ComisionRepartoDTO;
+import com.vendelote.dto.ComisionRepartoSocioDTO;
 import com.vendelote.dto.PagoComisionDTO;
 import com.vendelote.entity.Cliente;
 import com.vendelote.entity.Comision;
@@ -22,6 +24,7 @@ import com.vendelote.entity.VentaCliente;
 import com.vendelote.enums.EstadoComision;
 import com.vendelote.enums.EstadoPago;
 import com.vendelote.enums.FormaPago;
+import com.vendelote.enums.ModalidadVenta;
 import com.vendelote.exception.NegocioException;
 import com.vendelote.repository.ClienteRepository;
 import com.vendelote.repository.ComisionRepository;
@@ -50,6 +53,7 @@ public class ComisionService {
     private final ClienteRepository clienteRepository;
     private final EmpresaRepository empresaRepository;
     private final VentaService ventaService;
+    private final ComisionRepartoService repartoService;
 
     @Transactional(readOnly = true)
     public List<ComisionListadoDTO> listar(String estado) {
@@ -118,12 +122,13 @@ public class ComisionService {
             return new ComisionListadoDTO(
                     c.getId(), c.getIdVenta(), c.getEstado().name(),
                     c.getMontoTotal(), c.getMontoPagado(), c.getMontoSaldo(), c.getMontoAnticipo(),
-                    c.getCantidadCuotas(),
+                    c.getPorcentajeAnticipo(), c.getMontoCuota(), c.getCantidadCuotas(),
                     c.getIdLote(),
                     lote != null ? lote.getProyecto() + " Mz." + lote.getManzana() + " Lt." + lote.getNumero() : "-",
                     c.getIdEmpresa(), empresa != null ? empresa.getRazonSocial() : "-",
                     nombreCliente,
                     (int) pendientes, montoPendiente,
+                    repartoService.listar(c.getId(), idV),
                     pagos.stream().map(ventaService::toPagoDTO).toList());
         }).toList();
     }
@@ -211,6 +216,31 @@ public class ComisionService {
     public Comision buscar(Integer id) {
         return comisionRepository.findByIdAndIdVendedor(id, TenantContext.idVendedorRequerido())
                 .orElseThrow(() -> new NegocioException("Comisión no encontrada"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ComisionRepartoDTO> obtenerRepartos(Integer idComision) {
+        Comision comision = buscar(idComision);
+        return repartoService.listar(comision.getId(), comision.getIdVendedor());
+    }
+
+    /** Reemplaza el reparto de socios de una comisión existente. */
+    @Transactional
+    public ComisionListadoDTO actualizarReparto(Integer idComision,
+                                                List<ComisionRepartoSocioDTO> socios) {
+        Comision comision = buscar(idComision);
+        if (comision.getEstado() == EstadoComision.ANULADA) {
+            throw new NegocioException("La comisión está anulada");
+        }
+        Venta venta = ventaRepository
+                .findByIdAndIdVendedor(comision.getIdVenta(), comision.getIdVendedor())
+                .orElse(null);
+        BigDecimal inicialTotal = (venta != null && venta.getModalidad() == ModalidadVenta.CONTADO)
+                ? comision.getMontoTotal() : comision.getMontoAnticipo();
+        BigDecimal cuotaBase = comision.getCantidadCuotas() != null
+                && comision.getCantidadCuotas() > 0 ? comision.getMontoCuota() : null;
+        repartoService.reemplazar(comision, socios, inicialTotal, cuotaBase);
+        return obtener(idComision);
     }
 
     // ── Internos ───────────────────────────────────────────────────────────────

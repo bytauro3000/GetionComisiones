@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vendelote.dto.CobrarPagosDTO;
 import com.vendelote.dto.ComisionListadoDTO;
+import com.vendelote.dto.ComisionRepartoDTO;
+import com.vendelote.dto.ComisionRepartoSocioDTO;
 import com.vendelote.enums.AccionAuditoria;
 import com.vendelote.service.AuditoriaService;
 import com.vendelote.service.ComisionService;
@@ -41,6 +44,22 @@ public class ComisionController {
     @GetMapping("/{id}")
     public ResponseEntity<ComisionListadoDTO> obtener(@PathVariable Integer id) {
         return ResponseEntity.ok(comisionService.obtener(id));
+    }
+
+    @GetMapping("/{id}/reparto")
+    public ResponseEntity<List<ComisionRepartoDTO>> obtenerReparto(@PathVariable Integer id) {
+        return ResponseEntity.ok(comisionService.obtenerRepartos(id));
+    }
+
+    /** Reemplaza el reparto con socios (inicial y/o letras). */
+    @PutMapping("/{id}/reparto")
+    public ResponseEntity<ComisionListadoDTO> actualizarReparto(
+            @PathVariable Integer id,
+            @RequestBody List<ComisionRepartoSocioDTO> socios) {
+        ComisionListadoDTO resultado = comisionService.actualizarReparto(id, socios);
+        auditoriaService.registrar(AccionAuditoria.ACTUALIZAR, "Comision", id,
+                "Reparto de comisión actualizado: " + socios.size() + " socio(s)");
+        return ResponseEntity.ok(resultado);
     }
 
     @PostMapping("/{id}/pagos")

@@ -29,6 +29,10 @@ public class LoteSeparacionDTO {
     /** true = la separación la hizo otro vendedor (bloquea la venta). */
     private boolean ajena;
 
+    /** Cliente con quien se separó (opcional). */
+    @Size(max = 150, message = "El cliente no puede superar 150 caracteres")
+    private String cliente;
+
     /** Motivo / nota de la separación (opcional). */
     @Size(max = 300, message = "La nota no puede superar 300 caracteres")
     private String nota;

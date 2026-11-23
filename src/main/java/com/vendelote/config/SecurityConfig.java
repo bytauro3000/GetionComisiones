@@ -45,6 +45,7 @@ public class SecurityConfig {
                 // ── Rutas públicas (sin autenticación) ────────────────────────────
                 .requestMatchers(
                     "/api/auth/**",
+                    "/actuator/health",
                     "/error"
                 ).permitAll()
                 // ── Gestión de usuarios, auditoría y sesiones: solo ADMINISTRADOR ──
@@ -75,7 +76,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        // Patrones: permite fijar el dominio de Vercel y, si se desea, https://*.vercel.app
+        cfg.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);

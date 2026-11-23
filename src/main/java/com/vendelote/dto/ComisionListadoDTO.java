@@ -19,6 +19,8 @@ public class ComisionListadoDTO {
     private BigDecimal montoPagado;
     private BigDecimal montoSaldo;
     private BigDecimal montoAnticipo;
+    private BigDecimal porcentajeAnticipo;
+    private BigDecimal montoCuota;
     private Integer cantidadCuotas;
 
     private Integer idLote;
@@ -29,6 +31,9 @@ public class ComisionListadoDTO {
 
     private Integer pagosPendientes;
     private BigDecimal montoPendiente;
+
+    /** Socios con quienes se reparte el inicial y/o las letras (máx. 2). */
+    private List<ComisionRepartoDTO> repartos;
 
     private List<PagoComisionDTO> pagos;
 }

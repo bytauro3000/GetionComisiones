@@ -44,6 +44,8 @@ public class SeparacionExpirationJob {
             lote.setFechaVinceSeparacion(null);
             lote.setMontoSeparacion(null);
             lote.setSeparacionAjena(false);
+            lote.setClienteSeparacion(null);
+            lote.setNotaSeparacion(null);
             lote.setMotivoEstado(null);
         }
         loteRepository.saveAll(vencidos);

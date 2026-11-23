@@ -69,6 +69,10 @@ public class Comision implements TenantEntity {
     @Column(name = "monto_total", nullable = false, precision = 14, scale = 2)
     private BigDecimal montoTotal;
 
+    /** % del inicial del cliente aplicado al anticipo (snapshot; null si monto fijo). */
+    @Column(name = "porcentaje_anticipo", precision = 5, scale = 4)
+    private BigDecimal porcentajeAnticipo;
+
     /** Anticipo (financiado) o 0 (contado). */
     @Column(name = "monto_anticipo", nullable = false, precision = 14, scale = 2)
     private BigDecimal montoAnticipo = BigDecimal.ZERO;

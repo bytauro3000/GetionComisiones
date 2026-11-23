@@ -47,7 +47,8 @@ public class Proforma implements TenantEntity {
     @Column(name = "id_vendedor", nullable = false)
     private Integer idVendedor;
 
-    @Column(name = "id_empresa", nullable = false)
+    /** Empresa referencial (opcional): la proforma puede incluir lotes de varias empresas. */
+    @Column(name = "id_empresa")
     private Integer idEmpresa;
 
     /** Número correlativo emitido por el backend, p.ej. "PF-2026-0001". */

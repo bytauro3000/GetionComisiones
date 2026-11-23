@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vendelote.dto.ClienteDTO;
+import com.vendelote.dto.SeguimientoClienteDTO;
 import com.vendelote.entity.Cliente;
 import com.vendelote.enums.AccionAuditoria;
 import com.vendelote.service.AuditoriaService;
@@ -41,6 +43,34 @@ public class ClienteController {
     @GetMapping("/{id}")
     public ResponseEntity<Cliente> obtener(@PathVariable Integer id) {
         return ResponseEntity.ok(clienteService.buscar(id));
+    }
+
+    /** Búsqueda rápida por documento (para la emisión de proformas). */
+    @GetMapping("/por-documento")
+    public ResponseEntity<Cliente> porDocumento(@RequestParam String numDocumento) {
+        return clienteService.buscarPorDocumento(numDocumento)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /** Actualiza el seguimiento comercial del cliente/prospecto. */
+    @PatchMapping("/{id}/seguimiento")
+    public ResponseEntity<Cliente> seguimiento(@PathVariable Integer id,
+                                               @RequestBody SeguimientoClienteDTO dto) {
+        Cliente actualizado = clienteService.actualizarSeguimiento(id, dto);
+        auditoriaService.registrar(AccionAuditoria.ACTUALIZAR, "Cliente", id,
+                "Seguimiento actualizado: " + actualizado.getEstadoSeguimiento()
+                        + " | " + actualizado.getNumDocumento());
+        return ResponseEntity.ok(actualizado);
+    }
+
+    /** Convierte un prospecto en cliente (registro completo). */
+    @PatchMapping("/{id}/completar")
+    public ResponseEntity<Cliente> completar(@PathVariable Integer id) {
+        Cliente actualizado = clienteService.completar(id);
+        auditoriaService.registrar(AccionAuditoria.ACTUALIZAR, "Cliente", id,
+                "Prospecto convertido en cliente: " + actualizado.getNumDocumento());
+        return ResponseEntity.ok(actualizado);
     }
 
     @PostMapping

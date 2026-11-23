@@ -1,9 +1,11 @@
 package com.vendelote.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.vendelote.enums.EstadoSeguimiento;
 import com.vendelote.enums.TipoDocumento;
 
 import jakarta.persistence.Column;
@@ -67,6 +69,24 @@ public class Cliente implements TenantEntity {
 
     @Column(name = "direccion", length = 200)
     private String direccion;
+
+    /**
+     * true = prospecto (datos básicos: documento, nombre y celular).
+     * Se completa el registro completo cuando separa o compra.
+     */
+    @Column(name = "prospecto", nullable = false)
+    private boolean prospecto = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_seguimiento", nullable = false, length = 20)
+    private EstadoSeguimiento estadoSeguimiento = EstadoSeguimiento.NUEVO;
+
+    @Column(name = "nota_seguimiento", length = 300)
+    private String notaSeguimiento;
+
+    /** Próxima fecha para contactar al prospecto/cliente. */
+    @Column(name = "proximo_contacto")
+    private LocalDate proximoContacto;
 
     @CreationTimestamp
     @Column(name = "fecha_registro", nullable = false, updatable = false)

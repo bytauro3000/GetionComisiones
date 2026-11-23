@@ -11,6 +11,8 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
     Optional<Cliente> findByIdAndIdVendedor(Integer id, Integer idVendedor);
 
+    Optional<Cliente> findByIdVendedorAndNumDocumento(Integer idVendedor, String numDocumento);
+
     List<Cliente> findByIdVendedorOrderByNombresAsc(Integer idVendedor);
 
     boolean existsByIdVendedorAndNumDocumento(Integer idVendedor, String numDocumento);

@@ -1,8 +1,12 @@
 package com.vendelote.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,9 +20,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vendelote.dto.ProformaDTO;
+import com.vendelote.dto.ProformaSeguimientoDTO;
 import com.vendelote.entity.Proforma;
 import com.vendelote.enums.AccionAuditoria;
 import com.vendelote.service.AuditoriaService;
+import com.vendelote.service.ProformaPdfService;
 import com.vendelote.service.ProformaService;
 
 import jakarta.validation.Valid;
@@ -31,16 +37,39 @@ import lombok.RequiredArgsConstructor;
 public class ProformaController {
 
     private final ProformaService proformaService;
+    private final ProformaPdfService proformaPdfService;
     private final AuditoriaService auditoriaService;
 
     @GetMapping
-    public ResponseEntity<List<Proforma>> listar() {
-        return ResponseEntity.ok(proformaService.listar());
+    public ResponseEntity<List<Proforma>> listar(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
+        return ResponseEntity.ok(proformaService.listar(fechaDesde, fechaHasta));
+    }
+
+    /** Seguimiento: clientes/prospectos que solicitaron proforma en el rango. */
+    @GetMapping("/seguimiento")
+    public ResponseEntity<List<ProformaSeguimientoDTO>> seguimiento(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
+        return ResponseEntity.ok(proformaService.seguimiento(fechaDesde, fechaHasta));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Proforma> obtener(@PathVariable Integer id) {
         return ResponseEntity.ok(proformaService.buscar(id));
+    }
+
+    /** PDF de la proforma (para descargar o compartir por WhatsApp). */
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> pdf(@PathVariable Integer id) {
+        Proforma proforma = proformaService.buscar(id);
+        byte[] pdf = proformaPdfService.generar(proforma);
+        String nombre = "Proforma-" + (proforma.getNumero() != null ? proforma.getNumero() : id) + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + nombre + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     @PostMapping

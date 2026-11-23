@@ -42,6 +42,17 @@ public class ProformaDetalle {
     @Column(name = "id_lote")
     private Integer idLote;
 
+    /** Snapshot de la empresa del lote (puede haber varias en una proforma). */
+    @Column(name = "id_empresa")
+    private Integer idEmpresa;
+
+    @Column(name = "empresa_nombre", length = 150)
+    private String empresaNombre;
+
+    /** Snapshot del programa/proyecto del lote. */
+    @Column(name = "proyecto", length = 120)
+    private String proyecto;
+
     @Column(name = "descripcion", nullable = false, length = 200)
     private String descripcion;
 
@@ -50,4 +61,12 @@ public class ProformaDetalle {
 
     @Column(name = "precio_unitario", nullable = false, precision = 14, scale = 2)
     private BigDecimal precioUnitario;
+
+    /** Inicial pactada para este lote (puede reducirse respecto a la del lote). */
+    @Column(name = "inicial", precision = 14, scale = 2)
+    private BigDecimal inicial;
+
+    /** N° de cuotas del plan (snapshot del lote o ajustado). */
+    @Column(name = "num_cuotas")
+    private Integer numCuotas;
 }

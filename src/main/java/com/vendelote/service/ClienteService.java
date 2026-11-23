@@ -2,12 +2,15 @@ package com.vendelote.service;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vendelote.dto.ClienteDTO;
+import com.vendelote.dto.SeguimientoClienteDTO;
 import com.vendelote.entity.Cliente;
+import com.vendelote.enums.EstadoSeguimiento;
 import com.vendelote.enums.TipoDocumento;
 import com.vendelote.exception.NegocioException;
 import com.vendelote.repository.ClienteRepository;
@@ -91,6 +94,33 @@ public class ClienteService {
                 .orElseThrow(() -> new NegocioException("Cliente no encontrado"));
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Cliente> buscarPorDocumento(String numDocumento) {
+        if (numDocumento == null || numDocumento.isBlank()) {
+            return Optional.empty();
+        }
+        return clienteRepository.findByIdVendedorAndNumDocumento(
+                TenantContext.idVendedorRequerido(), numDocumento.trim());
+    }
+
+    /** Actualiza el seguimiento comercial (estado, nota, próximo contacto). */
+    @Transactional
+    public Cliente actualizarSeguimiento(Integer id, SeguimientoClienteDTO dto) {
+        Cliente cliente = buscar(id);
+        cliente.setEstadoSeguimiento(estadoSeguimientoDesde(dto.getEstado()));
+        cliente.setNotaSeguimiento(limpiar(dto.getNota()));
+        cliente.setProximoContacto(dto.getProximoContacto());
+        return clienteRepository.save(cliente);
+    }
+
+    /** Marca al prospecto como cliente (registro completo). */
+    @Transactional
+    public Cliente completar(Integer id) {
+        Cliente cliente = buscar(id);
+        cliente.setProspecto(false);
+        return clienteRepository.save(cliente);
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private TipoDocumento tipoDesde(String valor) {
@@ -131,5 +161,27 @@ public class ClienteService {
         cliente.setTelefono(dto.getTelefono());
         cliente.setCorreo(dto.getCorreo());
         cliente.setDireccion(dto.getDireccion());
+        if (dto.getProspecto() != null) {
+            cliente.setProspecto(dto.getProspecto());
+        }
+        cliente.setEstadoSeguimiento(estadoSeguimientoDesde(dto.getEstadoSeguimiento()));
+        cliente.setNotaSeguimiento(limpiar(dto.getNotaSeguimiento()));
+        cliente.setProximoContacto(dto.getProximoContacto());
+    }
+
+    private EstadoSeguimiento estadoSeguimientoDesde(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return EstadoSeguimiento.NUEVO;
+        }
+        try {
+            return EstadoSeguimiento.valueOf(valor.trim().toUpperCase(Locale.ROOT));
+        } catch (Exception e) {
+            throw new NegocioException(
+                    "Estado de seguimiento no válido: use NUEVO, CONTACTADO, INTERESADO, NO_INTERESADO o GANADO");
+        }
+    }
+
+    private String limpiar(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 }

@@ -34,6 +34,7 @@ import com.vendelote.repository.LoteRepository;
 import com.vendelote.repository.PagoComisionRepository;
 import com.vendelote.repository.ParametroComisionRepository;
 import com.vendelote.repository.ProformaRepository;
+import com.vendelote.repository.SecuenciaProformaRepository;
 import com.vendelote.repository.ProyectoRepository;
 import com.vendelote.repository.RefreshTokenRepository;
 import com.vendelote.repository.SecuenciaRepository;
@@ -63,6 +64,7 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
     private final DetalleComprobanteRepository detalleComprobanteRepository;
     private final ComprobanteRepository comprobanteRepository;
     private final ProformaRepository proformaRepository;
+    private final SecuenciaProformaRepository secuenciaProformaRepository;
     private final VentaRepository ventaRepository;
     private final LoteRepository loteRepository;
     private final ProyectoRepository proyectoRepository;
@@ -312,6 +314,7 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
 
         // 3) Proformas (JPA borra en cascada sus detalles)
         proformaRepository.deleteByIdVendedor(v);
+        secuenciaProformaRepository.deleteByIdVendedor(v);
 
         // 4) Ventas
         ventaRepository.deleteByIdVendedor(v);

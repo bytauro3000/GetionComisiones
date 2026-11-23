@@ -15,7 +15,7 @@ public class ProformaDTO {
 
     private Integer id;
 
-    @NotNull(message = "La empresa es obligatoria")
+    /** Empresa referencial (opcional): la proforma puede tener lotes de varias empresas. */
     private Integer idEmpresa;
 
     @NotNull(message = "El cliente es obligatorio")

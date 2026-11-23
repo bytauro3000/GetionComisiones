@@ -1,5 +1,7 @@
 package com.vendelote.dto;
 
+import java.time.LocalDate;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -32,4 +34,16 @@ public class ClienteDTO {
 
     @Size(max = 200)
     private String direccion;
+
+    /** true = prospecto (no obliga a completar todos los datos). */
+    private Boolean prospecto;
+
+    /** NUEVO | CONTACTADO | INTERESADO | NO_INTERESADO | GANADO */
+    @Size(max = 20)
+    private String estadoSeguimiento;
+
+    @Size(max = 300)
+    private String notaSeguimiento;
+
+    private LocalDate proximoContacto;
 }

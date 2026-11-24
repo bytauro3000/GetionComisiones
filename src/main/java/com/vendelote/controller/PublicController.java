@@ -29,7 +29,7 @@ public class PublicController {
                 .cacheControl(CacheControl.noStore())
                 .body(Map.of(
                         "status", "ok",
-                        "servicio", "VendeLote"
+                        "servicio", "Closure"
                 ));
     }
 }

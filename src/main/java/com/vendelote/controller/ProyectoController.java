@@ -85,12 +85,17 @@ public class ProyectoController {
     /** Sirve el plano con autenticación (tenant). El frontend lo pide como blob. */
     @GetMapping("/{id}/plano")
     public ResponseEntity<byte[]> obtenerPlano(@PathVariable Integer id) {
-        ProyectoService.PlanoRecurso plano = proyectoService.recursoPlano(id);
+        java.util.Optional<ProyectoService.PlanoRecurso> plano = proyectoService.recursoPlano(id);
+        if (plano.isEmpty()) {
+            // Sin plano o archivo perdido (disco efímero): 204 en vez de 400.
+            return ResponseEntity.noContent().build();
+        }
+        ProyectoService.PlanoRecurso recurso = plano.get();
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(plano.contentType()))
+                .contentType(MediaType.parseMediaType(recurso.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"plano-" + id + "\"")
-                .body(plano.bytes());
+                .body(recurso.bytes());
     }
 
     @DeleteMapping("/{id}/plano")

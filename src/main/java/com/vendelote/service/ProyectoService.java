@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -175,27 +176,32 @@ public class ProyectoService {
     }
 
     @Transactional(readOnly = true)
-    public PlanoRecurso recursoPlano(Integer id) {
+    public Optional<PlanoRecurso> recursoPlano(Integer id) {
         Proyecto proyecto = buscar(id);
         String ruta = proyecto.getPlanoRuta();
-        if (ruta == null) {
-            throw new NegocioException("El proyecto no tiene plano");
+        if (ruta == null || ruta.isBlank()) {
+            return Optional.empty();
         }
 
         if (ruta.startsWith("http")) {
             // Cloudinary: el backend hace de proxy (el frontend nunca ve la URL)
-            byte[] bytes = cloudinaryService.descargar(ruta);
-            return new PlanoRecurso(bytes, contentTypeDesde(ruta));
+            try {
+                byte[] bytes = cloudinaryService.descargar(ruta);
+                return Optional.of(new PlanoRecurso(bytes, contentTypeDesde(ruta)));
+            } catch (Exception e) {
+                return Optional.empty();
+            }
         }
 
         Path archivo = Paths.get(uploadsDir, ruta);
         if (!Files.exists(archivo)) {
-            throw new NegocioException("El archivo del plano no está disponible");
+            // El disco de Render es efímero: el archivo pudo perderse en un redeploy.
+            return Optional.empty();
         }
         try {
-            return new PlanoRecurso(Files.readAllBytes(archivo), contentTypeDesde(ruta));
+            return Optional.of(new PlanoRecurso(Files.readAllBytes(archivo), contentTypeDesde(ruta)));
         } catch (IOException e) {
-            throw new NegocioException("No se pudo leer el plano");
+            return Optional.empty();
         }
     }
 

@@ -81,6 +81,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     /** Rutas públicas — debe coincidir con el permitAll de SecurityConfig. */
     private boolean esRutaPublica(String path) {
         return path.contains("/api/auth/")
+                || path.contains("/api/public/")
+                || path.contains("/api/proformas/pdf-publico/")
                 || path.startsWith("/actuator/")
                 || path.equals("/favicon.ico")
                 || path.equals("/favicon.png")

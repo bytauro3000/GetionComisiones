@@ -55,6 +55,10 @@ public class Proforma implements TenantEntity {
     @Column(name = "numero", nullable = false, length = 20)
     private String numero;
 
+    /** Token no adivinable para el enlace público del PDF (WhatsApp). */
+    @Column(name = "public_token", length = 36)
+    private String publicToken;
+
     @Column(name = "fecha", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime fecha;

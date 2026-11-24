@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +75,16 @@ public class ProformaService {
                 .orElseThrow(() -> new NegocioException("Proforma no encontrada"));
     }
 
+    /** Carga una proforma por su token público (enlace del PDF, sin login). */
+    @Transactional(readOnly = true)
+    public Proforma buscarPorTokenPublico(String token) {
+        if (token == null || token.isBlank()) {
+            throw new NegocioException("Enlace no válido");
+        }
+        return proformaRepository.findByPublicToken(token.trim())
+                .orElseThrow(() -> new NegocioException("Enlace no válido o vencido"));
+    }
+
     @Transactional
     public Proforma crear(ProformaDTO dto) {
         Integer idV = TenantContext.idVendedorRequerido();
@@ -86,6 +97,7 @@ public class ProformaService {
         proforma.setIdVendedor(idV);
         proforma.setIdEmpresa(dto.getIdEmpresa());
         proforma.setIdCliente(cliente.getId());
+        proforma.setPublicToken(UUID.randomUUID().toString());
         proforma.setObservaciones(limpiar(dto.getObservaciones()));
         aplicarDetalles(proforma, dto, idV); // valida lotes ANTES de consumir correlativo
         proforma.setNumero(siguienteNumero(idV, LocalDate.now().getYear()));

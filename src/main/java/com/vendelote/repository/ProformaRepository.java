@@ -13,6 +13,8 @@ public interface ProformaRepository extends JpaRepository<Proforma, Integer> {
 
     Optional<Proforma> findByIdAndIdVendedor(Integer id, Integer idVendedor);
 
+    Optional<Proforma> findByPublicToken(String publicToken);
+
 
     /** Borrado en cascada: elimina las filas del vendedor indicado. */
     void deleteByIdVendedor(Integer idVendedor);

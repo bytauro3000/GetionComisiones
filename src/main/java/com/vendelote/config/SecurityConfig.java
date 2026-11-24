@@ -45,6 +45,8 @@ public class SecurityConfig {
                 // ── Rutas públicas (sin autenticación) ────────────────────────────
                 .requestMatchers(
                     "/api/auth/**",
+                    "/api/public/**",
+                    "/api/proformas/pdf-publico/**",
                     "/actuator/health",
                     "/error"
                 ).permitAll()

@@ -72,6 +72,21 @@ public class ProformaController {
                 .body(pdf);
     }
 
+    /**
+     * PDF por enlace público (sin login) para enviarlo por WhatsApp.
+     * El token es un UUID no adivinable guardado en la proforma.
+     */
+    @GetMapping("/pdf-publico/{token}")
+    public ResponseEntity<byte[]> pdfPublico(@PathVariable String token) {
+        Proforma proforma = proformaService.buscarPorTokenPublico(token);
+        byte[] pdf = proformaPdfService.generar(proforma);
+        String nombre = "Proforma-" + (proforma.getNumero() != null ? proforma.getNumero() : "doc") + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + nombre + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
     @PostMapping
     public ResponseEntity<Proforma> crear(@Valid @RequestBody ProformaDTO dto) {
         Proforma creada = proformaService.crear(dto);

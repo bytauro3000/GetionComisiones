@@ -280,8 +280,15 @@ public class ProformaPdfService {
             return "";
         }
         StringBuilder sb = new StringBuilder();
-        if (u.getDni() != null && !u.getDni().isBlank()) {
-            sb.append("DNI ").append(u.getDni());
+        String tipo = u.getTipoDocumento();
+        String numero = u.getNumDocumento();
+        if ((numero == null || numero.isBlank())
+                && u.getDni() != null && !u.getDni().isBlank()) {
+            tipo = "DNI";
+            numero = u.getDni();
+        }
+        if (numero != null && !numero.isBlank()) {
+            sb.append(tipo == null || tipo.isBlank() ? "DOC " : tipo + " ").append(numero);
         }
         if (u.getTelefono() != null && !u.getTelefono().isBlank()) {
             if (sb.length() > 0) sb.append("  ·  ");

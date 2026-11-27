@@ -51,6 +51,13 @@ public class Usuario {
     @Column(length = 8)
     private String dni;
 
+    /** DNI | CE | RUC | OTRO. */
+    @Column(name = "tipo_documento", length = 20)
+    private String tipoDocumento;
+
+    @Column(name = "num_documento", length = 15)
+    private String numDocumento;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, length = 20)
     private EstadoUsuario estado = EstadoUsuario.activo;

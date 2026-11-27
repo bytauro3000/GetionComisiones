@@ -33,4 +33,10 @@ public class RegistroPublicoDTO {
     /** Opcional: si se envía, se autocompleta desde RENIEC (Declecta). */
     @Pattern(regexp = "^$|^\\d{8}$", message = "El DNI debe tener 8 dígitos")
     private String dni;
+
+    @Size(max = 20)
+    private String tipoDocumento;
+
+    @Size(max = 15)
+    private String numDocumento;
 }

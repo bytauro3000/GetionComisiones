@@ -227,9 +227,10 @@ public class ProformaService {
         for (DetalleProformaDTO item : dto.getDetalles()) {
             Lote lote = loteRepository.findByIdAndIdVendedor(item.getIdLote(), idV)
                     .orElseThrow(() -> new NegocioException("Lote no encontrado"));
-            if (lote.getEstado() == EstadoLote.VENDIDO) {
+            if (lote.getEstado() == EstadoLote.VENDIDO
+                    || lote.getEstado() == EstadoLote.RESERVADO) {
                 throw new NegocioException("El lote " + lote.getManzana() + "-" + lote.getNumero()
-                        + " ya está vendido");
+                        + " no está disponible (vendido o separado)");
             }
 
             String empresaNombre = empresas.computeIfAbsent(lote.getIdEmpresa(),

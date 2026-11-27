@@ -66,6 +66,7 @@ public class SocioService {
     private void aplicar(Socio socio, SocioDTO dto) {
         socio.setNombres(dto.getNombres().trim());
         socio.setApellidos(limpiar(dto.getApellidos()));
+        socio.setTipoDocumento(limpiar(dto.getTipoDocumento()));
         socio.setDocumento(limpiar(dto.getDocumento()));
         socio.setTelefono(limpiar(dto.getTelefono()));
         socio.setActivo(dto.getActivo() == null || dto.getActivo());
@@ -80,6 +81,7 @@ public class SocioService {
         dto.setId(s.getId());
         dto.setNombres(s.getNombres());
         dto.setApellidos(s.getApellidos());
+        dto.setTipoDocumento(s.getTipoDocumento());
         dto.setDocumento(s.getDocumento());
         dto.setTelefono(s.getTelefono());
         dto.setActivo(s.isActivo());

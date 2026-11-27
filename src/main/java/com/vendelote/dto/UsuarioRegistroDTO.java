@@ -32,6 +32,13 @@ public class UsuarioRegistroDTO {
     @Pattern(regexp = "^$|^\\d{8}$", message = "El DNI debe tener 8 dígitos")
     private String dni;
 
+    /** DNI | CE | RUC | OTRO. */
+    @Size(max = 20)
+    private String tipoDocumento;
+
+    @Size(max = 15)
+    private String numDocumento;
+
     /** ADMINISTRADOR | VENDEDOR */
     @NotBlank(message = "El rol es obligatorio")
     private String rol;

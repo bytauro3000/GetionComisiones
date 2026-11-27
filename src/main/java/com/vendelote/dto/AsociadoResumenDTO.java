@@ -9,6 +9,8 @@ public record AsociadoResumenDTO(
         String correo,
         String telefono,
         String dni,
+        String tipoDocumento,
+        String numDocumento,
         String estado,
         LocalDateTime fechaRegistro
 ) {

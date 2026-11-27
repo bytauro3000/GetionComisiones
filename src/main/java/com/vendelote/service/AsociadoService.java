@@ -57,7 +57,12 @@ public class AsociadoService {
         asociado.setCorreo(correo);
         asociado.setContrasena(passwordEncoder.encode(dto.getContrasena()));
         asociado.setTelefono(limpiar(dto.getTelefono()));
-        asociado.setDni(limpiar(dto.getDni()));
+        String tipo = tipoDocumento(dto.getTipoDocumento());
+        String numero = limpiar(dto.getNumDocumento() != null
+                ? dto.getNumDocumento() : dto.getDni());
+        asociado.setTipoDocumento(tipo);
+        asociado.setNumDocumento(numero);
+        asociado.setDni("DNI".equals(tipo) ? numero : null);
         asociado.setRol(RolUsuario.VENDEDOR_ASOCIADO);
         asociado.setIdVendedorJefe(idJefe);
         asociado.setEstado(EstadoUsuario.activo);
@@ -127,9 +132,17 @@ public class AsociadoService {
         return new AsociadoResumenDTO(
                 u.getId(), u.getNombres(), u.getApellidos(), u.getCorreo(),
                 u.getTelefono(), u.getDni(),
+                u.getTipoDocumento(), u.getNumDocumento(),
                 u.getEstado() != null ? u.getEstado().name() : null,
                 u.getFechaRegistro()
         );
+    }
+
+    private String tipoDocumento(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return "DNI";
+        }
+        return valor.trim().toUpperCase(Locale.ROOT);
     }
 
     private String limpiar(String valor) {

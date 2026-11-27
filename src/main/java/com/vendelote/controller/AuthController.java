@@ -106,7 +106,9 @@ public class AuthController {
         UsuarioListadoDTO creado = usuarioService.autoRegistro(dto);
         auditoriaService.registrar(AccionAuditoria.REGISTRO, "Usuario", creado.getId(),
                 "Auto-registro pendiente: " + creado.getCorreo()
-                        + " | DNI: " + (creado.getDni() == null ? "-" : creado.getDni())
+                        + " | Documento: "
+                        + (creado.getTipoDocumento() == null ? "" : creado.getTipoDocumento() + " ")
+                        + (creado.getNumDocumento() == null ? "-" : creado.getNumDocumento())
                         + " | IP: " + obtenerIpCliente(request));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(

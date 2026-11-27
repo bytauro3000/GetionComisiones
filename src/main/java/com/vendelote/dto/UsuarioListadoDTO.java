@@ -17,6 +17,8 @@ public class UsuarioListadoDTO {
     private String correo;
     private String telefono;
     private String dni;
+    private String tipoDocumento;
+    private String numDocumento;
     private String rol;
     private String estado;
     private LocalDateTime fechaRegistro;

@@ -19,6 +19,10 @@ public class SocioDTO {
     @Size(max = 120)
     private String apellidos;
 
+    /** DNI | CE | RUC | OTRO. */
+    @Size(max = 20)
+    private String tipoDocumento;
+
     @Size(max = 15)
     private String documento;
 

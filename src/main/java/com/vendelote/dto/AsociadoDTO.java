@@ -30,4 +30,11 @@ public class AsociadoDTO {
 
     @Size(max = 8)
     private String dni;
+
+    /** DNI | CE | RUC | OTRO. */
+    @Size(max = 20)
+    private String tipoDocumento;
+
+    @Size(max = 15)
+    private String numDocumento;
 }

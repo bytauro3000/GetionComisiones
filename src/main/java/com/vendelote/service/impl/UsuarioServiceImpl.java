@@ -129,16 +129,21 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
         nuevo.setApellidos(dto.getApellidos().trim());
         nuevo.setCorreo(correo);
         nuevo.setTelefono(dto.getTelefono());
-        nuevo.setDni(dto.getDni());
+        String tipo = tipoDocumento(dto.getTipoDocumento());
+        String numero = limpiar(dto.getNumDocumento() != null
+                ? dto.getNumDocumento() : dto.getDni());
+        nuevo.setTipoDocumento(tipo);
+        nuevo.setNumDocumento(numero);
+        nuevo.setDni("DNI".equals(tipo) ? numero : null);
         nuevo.setRol(RolUsuario.VENDEDOR);
         nuevo.setEstado(EstadoUsuario.pendiente);
         nuevo.setContrasena(passwordEncoder.encode(dto.getContrasena()));
 
         // Autocompletado desde RENIEC (Declecta): la identidad de la BD manda.
         // Si Declecta no está configurado o falla, se conservan los datos escritos.
-        if (nuevo.getDni() != null && !nuevo.getDni().isBlank()) {
+        if ("DNI".equals(tipo) && numero != null && !numero.isBlank()) {
             try {
-                declectaService.buscarDni(nuevo.getDni()).ifPresent(dni -> {
+                declectaService.buscarDni(numero).ifPresent(dni -> {
                     if (dni.getNombres() != null && !dni.getNombres().isBlank()) {
                         nuevo.setNombres(dni.getNombres());
                     }
@@ -365,7 +370,12 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
         usuario.setApellidos(dto.getApellidos().trim());
         usuario.setCorreo(dto.getCorreo().trim().toLowerCase());
         usuario.setTelefono(dto.getTelefono());
-        usuario.setDni(dto.getDni());
+        String tipo = tipoDocumento(dto.getTipoDocumento());
+        String numero = limpiar(dto.getNumDocumento() != null
+                ? dto.getNumDocumento() : dto.getDni());
+        usuario.setTipoDocumento(tipo);
+        usuario.setNumDocumento(numero);
+        usuario.setDni("DNI".equals(tipo) ? numero : null);
         usuario.setRol(rolDesde(dto));
 
         if (enCreacion && usuario.getRol() == null) {
@@ -405,7 +415,18 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
     private UsuarioListadoDTO toDTO(Usuario u) {
         return new UsuarioListadoDTO(
                 u.getId(), u.getNombres(), u.getApellidos(), u.getCorreo(),
-                u.getTelefono(), u.getDni(), u.getRol().name(),
-                u.getEstado().name(), u.getFechaRegistro());
+                u.getTelefono(), u.getDni(), u.getTipoDocumento(), u.getNumDocumento(),
+                u.getRol().name(), u.getEstado().name(), u.getFechaRegistro());
+    }
+
+    private String tipoDocumento(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return "DNI";
+        }
+        return valor.trim().toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private String limpiar(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 }

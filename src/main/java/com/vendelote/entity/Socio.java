@@ -45,6 +45,10 @@ public class Socio implements TenantEntity {
     @Column(name = "apellidos", length = 120)
     private String apellidos;
 
+    /** DNI | CE | RUC | OTRO. */
+    @Column(name = "tipo_documento", length = 20)
+    private String tipoDocumento;
+
     @Column(name = "documento", length = 15)
     private String documento;
 

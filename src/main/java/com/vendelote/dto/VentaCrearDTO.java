@@ -26,6 +26,9 @@ public class VentaCrearDTO {
     @NotEmpty(message = "Debe seleccionar al menos un cliente")
     private List<Integer> idsClientes;
 
+    /** Asociado que se atribuye la venta (opcional; null = venta del jefe). */
+    private Integer idVendedorAsociado;
+
     @NotNull(message = "La fecha de venta es obligatoria")
     private LocalDate fechaVenta;
 

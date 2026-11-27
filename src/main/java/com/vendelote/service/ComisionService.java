@@ -1,6 +1,7 @@
 package com.vendelote.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import com.vendelote.entity.Comision;
 import com.vendelote.entity.Empresa;
 import com.vendelote.entity.Lote;
 import com.vendelote.entity.PagoComision;
+import com.vendelote.entity.Usuario;
 import com.vendelote.entity.Venta;
 import com.vendelote.entity.VentaCliente;
 import com.vendelote.enums.EstadoComision;
@@ -32,6 +34,7 @@ import com.vendelote.repository.ComprobantePagoRepository;
 import com.vendelote.repository.EmpresaRepository;
 import com.vendelote.repository.LoteRepository;
 import com.vendelote.repository.PagoComisionRepository;
+import com.vendelote.repository.UsuarioRepository;
 import com.vendelote.repository.VentaRepository;
 import com.vendelote.security.TenantContext;
 
@@ -54,11 +57,17 @@ public class ComisionService {
     private final EmpresaRepository empresaRepository;
     private final VentaService ventaService;
     private final ComisionRepartoService repartoService;
+    private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
     public List<ComisionListadoDTO> listar(String estado) {
         Integer idV = TenantContext.idVendedorRequerido();
-        List<Comision> comisiones = comisionRepository.findByIdVendedorOrderByIdDesc(idV);
+        Integer idAsociadoActual = TenantContext.esAsociado()
+                ? TenantContext.idUsuarioActual() : null;
+        List<Comision> comisiones = comisionRepository.findByIdVendedorOrderByIdDesc(idV).stream()
+                .filter(c -> idAsociadoActual == null
+                        || idAsociadoActual.equals(c.getIdVendedorAsociado()))
+                .toList();
         if (estado != null && !estado.isBlank()) {
             EstadoComision filtro;
             try {
@@ -93,6 +102,13 @@ public class ComisionService {
                 .map(id -> clienteRepository.findByIdAndIdVendedor(id, idV).orElse(null))
                 .filter(c -> c != null)
                 .collect(Collectors.toMap(Cliente::getId, c -> c, (a, b) -> a));
+        Map<Integer, String> nombresAsociados = usuarioRepository.findAllById(
+                        comisiones.stream().map(Comision::getIdVendedorAsociado)
+                                .filter(java.util.Objects::nonNull).distinct().toList())
+                .stream().collect(Collectors.toMap(
+                        Usuario::getId,
+                        u -> (u.getNombres() + " "
+                                + (u.getApellidos() == null ? "" : u.getApellidos())).trim()));
 
         return comisiones.stream().map(c -> {
             List<PagoComision> pagos = pagoRepository
@@ -119,6 +135,15 @@ public class ComisionService {
                 }
             }
 
+            BigDecimal montoAsociado = BigDecimal.ZERO.setScale(2);
+            BigDecimal montoJefe = c.getMontoTotal();
+            if (c.getIdVendedorAsociado() != null) {
+                montoAsociado = c.getMontoTotal()
+                        .multiply(new BigDecimal("0.50"))
+                        .setScale(2, RoundingMode.HALF_UP);
+                montoJefe = c.getMontoTotal().subtract(montoAsociado);
+            }
+
             return new ComisionListadoDTO(
                     c.getId(), c.getIdVenta(), c.getEstado().name(),
                     c.getMontoTotal(), c.getMontoPagado(), c.getMontoSaldo(), c.getMontoAnticipo(),
@@ -127,6 +152,8 @@ public class ComisionService {
                     lote != null ? lote.getProyecto() + " Mz." + lote.getManzana() + " Lt." + lote.getNumero() : "-",
                     c.getIdEmpresa(), empresa != null ? empresa.getRazonSocial() : "-",
                     nombreCliente,
+                    c.getIdVendedorAsociado(), nombresAsociados.get(c.getIdVendedorAsociado()),
+                    montoJefe, montoAsociado,
                     (int) pendientes, montoPendiente,
                     repartoService.listar(c.getId(), idV),
                     pagos.stream().map(ventaService::toPagoDTO).toList());
@@ -214,8 +241,14 @@ public class ComisionService {
 
     @Transactional(readOnly = true)
     public Comision buscar(Integer id) {
-        return comisionRepository.findByIdAndIdVendedor(id, TenantContext.idVendedorRequerido())
+        Comision comision = comisionRepository.findByIdAndIdVendedor(
+                        id, TenantContext.idVendedorRequerido())
                 .orElseThrow(() -> new NegocioException("Comisión no encontrada"));
+        if (TenantContext.esAsociado()
+                && !TenantContext.idUsuarioActual().equals(comision.getIdVendedorAsociado())) {
+            throw new NegocioException("Comisión no encontrada");
+        }
+        return comision;
     }
 
     @Transactional(readOnly = true)

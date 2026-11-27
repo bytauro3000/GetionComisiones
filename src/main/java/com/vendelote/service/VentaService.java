@@ -25,6 +25,7 @@ import com.vendelote.entity.Empresa;
 import com.vendelote.entity.Lote;
 import com.vendelote.entity.ParametroComision;
 import com.vendelote.entity.PagoComision;
+import com.vendelote.entity.Usuario;
 import com.vendelote.entity.Venta;
 import com.vendelote.entity.VentaCliente;
 import com.vendelote.entity.VentaLote;
@@ -40,6 +41,7 @@ import com.vendelote.repository.ComisionRepository;
 import com.vendelote.repository.EmpresaRepository;
 import com.vendelote.repository.LoteRepository;
 import com.vendelote.repository.PagoComisionRepository;
+import com.vendelote.repository.UsuarioRepository;
 import com.vendelote.repository.VentaClienteRepository;
 import com.vendelote.repository.VentaLoteRepository;
 import com.vendelote.repository.VentaRepository;
@@ -79,11 +81,18 @@ public class VentaService {
     private final LoteService loteService;
     private final ClienteService clienteService;
     private final ComisionRepartoService repartoService;
+    private final AsociadoService asociadoService;
+    private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
     public List<VentaListadoDTO> listar() {
         Integer idV = TenantContext.idVendedorRequerido();
-        List<Venta> ventas = ventaRepository.findByIdVendedorOrderByFechaVentaDesc(idV);
+        Integer idAsociadoActual = TenantContext.esAsociado()
+                ? TenantContext.idUsuarioActual() : null;
+        List<Venta> ventas = ventaRepository.findByIdVendedorOrderByFechaVentaDesc(idV).stream()
+                .filter(v -> idAsociadoActual == null
+                        || idAsociadoActual.equals(v.getIdVendedorAsociado()))
+                .toList();
         if (ventas.isEmpty()) {
             return List.of();
         }
@@ -98,6 +107,11 @@ public class VentaService {
         Map<Integer, Empresa> empresas = porId(empresaRepository.findAllById(ids(ventas, Venta::getIdEmpresa)), Empresa::getId);
         Map<Integer, Comision> comisionesPorVenta = comisionRepository.findByIdVendedorOrderByIdDesc(idV).stream()
                 .collect(Collectors.toMap(Comision::getIdVenta, c -> c, (a, b) -> a));
+        Map<Integer, String> nombresAsociados = usuarioRepository.findAllById(
+                        ventas.stream().map(Venta::getIdVendedorAsociado)
+                                .filter(Objects::nonNull).distinct().toList())
+                .stream().collect(Collectors.toMap(Usuario::getId,
+                        u -> (u.getNombres() + " " + (u.getApellidos() == null ? "" : u.getApellidos())).trim()));
 
         return ventas.stream().map(v -> {
             List<Lote> lotesVenta = v.getLotes().stream()
@@ -113,6 +127,7 @@ public class VentaService {
                     v.getPrecioVenta(), v.getMontoInicial(),
                     etiquetaLotes(lotesVenta), nombresClientes(clientesVenta),
                     v.getIdEmpresa(), empresa != null ? empresa.getRazonSocial() : "-",
+                    v.getIdVendedorAsociado(), nombresAsociados.get(v.getIdVendedorAsociado()),
                     comision != null ? comision.getMontoTotal() : null,
                     comision != null ? comision.getMontoPagado() : null,
                     comision != null ? comision.getEstado().name() : null,
@@ -192,6 +207,8 @@ public class VentaService {
 
         Venta venta = new Venta();
         venta.setIdVendedor(idV);
+        venta.setIdVendedorAsociado(
+                asociadoService.resolverAsociado(dto.getIdVendedorAsociado()));
         venta.setIdEmpresa(lotes.get(0).getIdEmpresa());
         venta.setFechaVenta(dto.getFechaVenta());
         venta.setPrecioVenta(dto.getPrecioVenta());
@@ -271,8 +288,13 @@ public class VentaService {
 
     @Transactional(readOnly = true)
     public Venta buscar(Integer id) {
-        return ventaRepository.findByIdAndIdVendedor(id, TenantContext.idVendedorRequerido())
+        Venta venta = ventaRepository.findByIdAndIdVendedor(id, TenantContext.idVendedorRequerido())
                 .orElseThrow(() -> new NegocioException("Venta no encontrada"));
+        if (TenantContext.esAsociado()
+                && !TenantContext.idUsuarioActual().equals(venta.getIdVendedorAsociado())) {
+            throw new NegocioException("Venta no encontrada");
+        }
+        return venta;
     }
 
     // ── Generación de comisión + pagos ─────────────────────────────────────────
@@ -308,6 +330,7 @@ public class VentaService {
 
         Comision comision = new Comision();
         comision.setIdVendedor(venta.getIdVendedor());
+        comision.setIdVendedorAsociado(venta.getIdVendedorAsociado());
         comision.setIdVenta(venta.getId());
         comision.setIdEmpresa(venta.getIdEmpresa());
         // Es UNA comisión por venta agrupada; se referencia al primer lote

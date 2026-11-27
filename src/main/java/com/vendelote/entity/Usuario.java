@@ -62,4 +62,8 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     @Column(name = "rol", nullable = false, length = 30)
     private RolUsuario rol = RolUsuario.VENDEDOR;
+
+    /** Solo para VENDEDOR_ASOCIADO: usuario jefe al que pertenece. */
+    @Column(name = "id_vendedor_jefe")
+    private Integer idVendedorJefe;
 }

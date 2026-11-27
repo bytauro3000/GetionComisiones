@@ -46,4 +46,18 @@ public final class TenantContext {
         }
         return info.idUsuario();
     }
+
+    /** true si la sesión actual pertenece a un vendedor asociado. */
+    public static boolean esAsociado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_VENDEDOR_ASOCIADO".equals(a.getAuthority()));
+    }
+
+    /** true si la sesión actual es un vendedor jefe. */
+    public static boolean esVendedorJefe() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_VENDEDOR".equals(a.getAuthority()));
+    }
 }

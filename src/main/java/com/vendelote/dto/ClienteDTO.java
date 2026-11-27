@@ -22,6 +22,9 @@ public class ClienteDTO {
     @Size(max = 120)
     private String nombres;
 
+    /** Asociado dueño del cliente (opcional; null = jefe). */
+    private Integer idVendedorAsociado;
+
     @Size(max = 120)
     private String apellidos;
 

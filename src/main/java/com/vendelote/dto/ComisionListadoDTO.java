@@ -29,6 +29,12 @@ public class ComisionListadoDTO {
     private String empresaNombre;
     private String clienteNombre;
 
+    /** Asociado atribuido y su reparto informativo 50/50 con el jefe. */
+    private Integer idVendedorAsociado;
+    private String vendedorAsociado;
+    private BigDecimal montoJefe;
+    private BigDecimal montoAsociado;
+
     private Integer pagosPendientes;
     private BigDecimal montoPendiente;
 

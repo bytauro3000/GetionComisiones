@@ -30,8 +30,8 @@ import lombok.Setter;
  */
 @Entity
 @Table(name = "cliente",
-        uniqueConstraints = @UniqueConstraint(name = "uk_cliente_tenant_doc",
-                columnNames = { "id_vendedor", "num_documento" }),
+        uniqueConstraints = @UniqueConstraint(name = "uk_cliente_owner_doc",
+                columnNames = { "id_vendedor", "id_vendedor_asociado", "num_documento" }),
         indexes = @Index(name = "idx_cliente_tenant", columnList = "id_vendedor"))
 @EntityListeners(TenantAwareListener.class)
 @Getter
@@ -47,6 +47,10 @@ public class Cliente implements TenantEntity {
 
     @Column(name = "id_vendedor", nullable = false)
     private Integer idVendedor;
+
+    /** Asociado dueño del cliente (null = cliente del jefe). */
+    @Column(name = "id_vendedor_asociado")
+    private Integer idVendedorAsociado;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_documento", nullable = false, length = 20)

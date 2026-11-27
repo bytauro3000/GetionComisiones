@@ -29,10 +29,16 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
     private final VentaClienteRepository ventaClienteRepository;
+    private final AsociadoService asociadoService;
 
     @Transactional(readOnly = true)
     public List<Cliente> listar(String q) {
-        List<Cliente> todos = clienteRepository.findByIdVendedorOrderByNombresAsc(TenantContext.idVendedorRequerido());
+        Integer idV = TenantContext.idVendedorRequerido();
+        Integer idAsociado = TenantContext.esAsociado() ? TenantContext.idUsuarioActual() : null;
+        List<Cliente> todos = clienteRepository.findByIdVendedorOrderByNombresAsc(idV).stream()
+                .filter(c -> idAsociado == null
+                        || idAsociado.equals(c.getIdVendedorAsociado()))
+                .toList();
         if (q == null || q.isBlank()) {
             return todos;
         }
@@ -51,12 +57,15 @@ public class ClienteService {
         String doc = dto.getNumDocumento().trim();
 
         validarDocumento(tipo, doc);
-        if (clienteRepository.existsByIdVendedorAndNumDocumento(idV, doc)) {
+        Integer idAsociado = asociadoService.resolverAsociado(dto.getIdVendedorAsociado());
+        if (clienteRepository.existsByIdVendedorAndIdVendedorAsociadoAndNumDocumento(
+                idV, idAsociado, doc)) {
             throw new NegocioException("El cliente con documento " + doc + " ya está registrado");
         }
 
         Cliente cliente = new Cliente();
         cliente.setIdVendedor(idV);
+        cliente.setIdVendedorAsociado(idAsociado);
         cliente.setTipoDocumento(tipo);
         aplicar(cliente, dto, doc);
         return clienteRepository.save(cliente);
@@ -69,11 +78,18 @@ public class ClienteService {
         String doc = dto.getNumDocumento().trim();
 
         validarDocumento(tipo, doc);
-        if (clienteRepository.existsByIdVendedorAndNumDocumentoAndIdNot(
-                cliente.getIdVendedor(), doc, cliente.getId())) {
+        Integer idAsociado = cliente.getIdVendedorAsociado();
+        if (TenantContext.esAsociado()) {
+            idAsociado = TenantContext.idUsuarioActual();
+        } else if (dto.getIdVendedorAsociado() != null) {
+            idAsociado = asociadoService.resolverAsociado(dto.getIdVendedorAsociado());
+        }
+        if (clienteRepository.existsByIdVendedorAndIdVendedorAsociadoAndNumDocumentoAndIdNot(
+                cliente.getIdVendedor(), idAsociado, doc, cliente.getId())) {
             throw new NegocioException("El cliente con documento " + doc + " ya está registrado");
         }
 
+        cliente.setIdVendedorAsociado(idAsociado);
         cliente.setTipoDocumento(tipo);
         aplicar(cliente, dto, doc);
         return clienteRepository.save(cliente);
@@ -90,8 +106,14 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public Cliente buscar(Integer id) {
-        return clienteRepository.findByIdAndIdVendedor(id, TenantContext.idVendedorRequerido())
+        Cliente cliente = clienteRepository.findByIdAndIdVendedor(
+                        id, TenantContext.idVendedorRequerido())
                 .orElseThrow(() -> new NegocioException("Cliente no encontrado"));
+        if (TenantContext.esAsociado()
+                && !TenantContext.idUsuarioActual().equals(cliente.getIdVendedorAsociado())) {
+            throw new NegocioException("Cliente no encontrado");
+        }
+        return cliente;
     }
 
     @Transactional(readOnly = true)
@@ -99,8 +121,13 @@ public class ClienteService {
         if (numDocumento == null || numDocumento.isBlank()) {
             return Optional.empty();
         }
-        return clienteRepository.findByIdVendedorAndNumDocumento(
-                TenantContext.idVendedorRequerido(), numDocumento.trim());
+        Integer idV = TenantContext.idVendedorRequerido();
+        if (TenantContext.esAsociado()) {
+            return clienteRepository.findByIdVendedorAndIdVendedorAsociadoAndNumDocumento(
+                    idV, TenantContext.idUsuarioActual(), numDocumento.trim());
+        }
+        // El jefe puede reutilizar clientes de cualquier asociado del equipo.
+        return clienteRepository.findByIdVendedorAndNumDocumento(idV, numDocumento.trim());
     }
 
     /** Actualiza el seguimiento comercial (estado, nota, próximo contacto). */

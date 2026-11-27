@@ -28,6 +28,10 @@ public class VentaListadoDTO {
     private Integer idEmpresa;
     private String empresaNombre;
 
+    /** Asociado atribuido (null si la venta es directa del jefe). */
+    private Integer idVendedorAsociado;
+    private String vendedorAsociado;
+
     private BigDecimal comisionTotal;   // null si aún no existe comisión
     private BigDecimal comisionPagada;  // null si aún no existe comisión
     private String comisionEstado;      // null si aún no existe comisión

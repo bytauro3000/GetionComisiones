@@ -64,6 +64,10 @@ public class Venta implements TenantEntity {
     @Column(name = "id_vendedor", nullable = false)
     private Integer idVendedor;
 
+    /** Asociado que originó/atiende la venta (null = venta directa del jefe). */
+    @Column(name = "id_vendedor_asociado")
+    private Integer idVendedorAsociado;
+
     @Column(name = "id_empresa", nullable = false)
     private Integer idEmpresa;
 

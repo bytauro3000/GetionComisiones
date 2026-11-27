@@ -21,6 +21,9 @@ public class ProformaDTO {
     @NotNull(message = "El cliente es obligatorio")
     private Integer idCliente;
 
+    /** Asociado que emite/atiende la proforma (opcional; null = jefe). */
+    private Integer idVendedorAsociado;
+
     @Size(max = 500, message = "Las observaciones no pueden superar 500 caracteres")
     private String observaciones;
 

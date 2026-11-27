@@ -52,6 +52,10 @@ public class Comision implements TenantEntity {
     @Column(name = "id_vendedor", nullable = false)
     private Integer idVendedor;
 
+    /** Asociado atribuido a la venta; su 50% es informativo, se paga fuera del sistema. */
+    @Column(name = "id_vendedor_asociado")
+    private Integer idVendedorAsociado;
+
     @Column(name = "id_venta", nullable = false)
     private Integer idVenta;
 

@@ -47,6 +47,10 @@ public class Proforma implements TenantEntity {
     @Column(name = "id_vendedor", nullable = false)
     private Integer idVendedor;
 
+    /** Asociado que emitió/atiende la proforma (null = jefe). */
+    @Column(name = "id_vendedor_asociado")
+    private Integer idVendedorAsociado;
+
     /** Empresa referencial (opcional): la proforma puede incluir lotes de varias empresas. */
     @Column(name = "id_empresa")
     private Integer idEmpresa;

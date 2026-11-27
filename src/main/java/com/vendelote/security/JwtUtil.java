@@ -57,14 +57,7 @@ public class JwtUtil {
     public String generateToken(Authentication authentication, Usuario usuario) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Map<String, Object> claims = new HashMap<>();
-        claims.put("rol", userDetails.getAuthorities().iterator().next().getAuthority());
-        claims.put("nombre", usuario.getNombres());
-        claims.put("apellidos", usuario.getApellidos());
-        claims.put("id", usuario.getId());
-        // Multi-tenant: el vendedor ES el tenant; el admin de plataforma no lleva tid
-        if (usuario.getRol() == RolUsuario.VENDEDOR) {
-            claims.put("tid", usuario.getId());
-        }
+        aplicarClaims(claims, usuario);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -78,13 +71,7 @@ public class JwtUtil {
     /** Token generado desde el usuario (usado por el refresh rotativo). */
     public String generateTokenFromUsuario(Usuario usuario) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("rol", "ROLE_" + usuario.getRol().name().toUpperCase());
-        claims.put("nombre", usuario.getNombres());
-        claims.put("apellidos", usuario.getApellidos());
-        claims.put("id", usuario.getId());
-        if (usuario.getRol() == RolUsuario.VENDEDOR) {
-            claims.put("tid", usuario.getId());
-        }
+        aplicarClaims(claims, usuario);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -93,6 +80,23 @@ public class JwtUtil {
                 .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION_MS))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    private void aplicarClaims(Map<String, Object> claims, Usuario usuario) {
+        claims.put("rol", "ROLE_" + usuario.getRol().name().toUpperCase());
+        claims.put("nombre", usuario.getNombres());
+        claims.put("apellidos", usuario.getApellidos());
+        claims.put("id", usuario.getId());
+
+        if (usuario.getRol() == RolUsuario.VENDEDOR) {
+            claims.put("tid", usuario.getId());
+        } else if (usuario.getRol() == RolUsuario.VENDEDOR_ASOCIADO) {
+            if (usuario.getIdVendedorJefe() == null) {
+                throw new IllegalStateException("El vendedor asociado no tiene un jefe asignado");
+            }
+            // El asociado comparte el tenant del jefe.
+            claims.put("tid", usuario.getIdVendedorJefe());
+        }
     }
 
     public String extractUsername(String token) {

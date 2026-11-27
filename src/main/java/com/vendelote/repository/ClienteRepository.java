@@ -19,6 +19,15 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
     boolean existsByIdVendedorAndNumDocumentoAndIdNot(Integer idVendedor, String numDocumento, Integer id);
 
+    Optional<Cliente> findByIdVendedorAndIdVendedorAsociadoAndNumDocumento(
+            Integer idVendedor, Integer idVendedorAsociado, String numDocumento);
+
+    boolean existsByIdVendedorAndIdVendedorAsociadoAndNumDocumento(
+            Integer idVendedor, Integer idVendedorAsociado, String numDocumento);
+
+    boolean existsByIdVendedorAndIdVendedorAsociadoAndNumDocumentoAndIdNot(
+            Integer idVendedor, Integer idVendedorAsociado, String numDocumento, Integer id);
+
 
     /** Borrado en cascada: elimina las filas del vendedor indicado. */
     void deleteByIdVendedor(Integer idVendedor);

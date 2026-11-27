@@ -57,6 +57,65 @@ public class SecurityConfig {
                     "/api/auditoria/**",
                     "/api/admin/**"
                 ).hasAuthority("ROLE_ADMINISTRADOR")
+                // ── Vendedores asociados: solo el jefe de ese equipo ─────────────
+                .requestMatchers("/api/asociados/**").hasAuthority("ROLE_VENDEDOR")
+                // ── Escrituras de operación: solo el jefe (el asociado es lectura)
+                //    El asociado sí puede crear clientes y proformas.
+                .requestMatchers(
+                    org.springframework.http.HttpMethod.POST,
+                    "/api/ventas/**",
+                    "/api/lotes/**",
+                    "/api/proyectos/**",
+                    "/api/empresas/**",
+                    "/api/socios/**",
+                    "/api/liquidaciones/**",
+                    "/api/comprobantes/**",
+                    "/api/parametros-comision/**",
+                    "/api/comisiones/**"
+                ).hasAnyAuthority("ROLE_VENDEDOR", "ROLE_ADMINISTRADOR")
+                .requestMatchers(
+                    org.springframework.http.HttpMethod.PUT,
+                    "/api/ventas/**",
+                    "/api/lotes/**",
+                    "/api/proyectos/**",
+                    "/api/empresas/**",
+                    "/api/socios/**",
+                    "/api/liquidaciones/**",
+                    "/api/comprobantes/**",
+                    "/api/parametros-comision/**",
+                    "/api/comisiones/**"
+                ).hasAnyAuthority("ROLE_VENDEDOR", "ROLE_ADMINISTRADOR")
+                .requestMatchers(
+                    org.springframework.http.HttpMethod.PATCH,
+                    "/api/ventas/**",
+                    "/api/lotes/**",
+                    "/api/proyectos/**",
+                    "/api/empresas/**",
+                    "/api/socios/**",
+                    "/api/liquidaciones/**",
+                    "/api/comprobantes/**",
+                    "/api/parametros-comision/**",
+                    "/api/comisiones/**"
+                ).hasAnyAuthority("ROLE_VENDEDOR", "ROLE_ADMINISTRADOR")
+                .requestMatchers(
+                    org.springframework.http.HttpMethod.DELETE,
+                    "/api/ventas/**",
+                    "/api/lotes/**",
+                    "/api/proyectos/**",
+                    "/api/empresas/**",
+                    "/api/socios/**",
+                    "/api/liquidaciones/**",
+                    "/api/comprobantes/**",
+                    "/api/parametros-comision/**",
+                    "/api/comisiones/**"
+                ).hasAnyAuthority("ROLE_VENDEDOR", "ROLE_ADMINISTRADOR")
+                // Módulos que no forman parte del trabajo del asociado.
+                .requestMatchers(
+                    "/api/comprobantes/**",
+                    "/api/liquidaciones/**",
+                    "/api/socios/**",
+                    "/api/parametros-comision/**"
+                ).hasAnyAuthority("ROLE_VENDEDOR", "ROLE_ADMINISTRADOR")
                 // ── Cualquier otra ruta requiere sesión válida ────────────────────
                 .anyRequest().authenticated()
             )

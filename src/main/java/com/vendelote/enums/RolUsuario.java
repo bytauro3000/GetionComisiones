@@ -6,5 +6,6 @@ package com.vendelote.enums;
  */
 public enum RolUsuario {
     ADMINISTRADOR,
-    VENDEDOR
+    VENDEDOR,
+    VENDEDOR_ASOCIADO
 }

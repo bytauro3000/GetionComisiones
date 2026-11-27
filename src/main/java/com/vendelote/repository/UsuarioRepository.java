@@ -20,5 +20,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
     List<Usuario> findByRol(RolUsuario rol);
 
+    List<Usuario> findByIdVendedorJefeOrderByNombresAsc(Integer idVendedorJefe);
+
+    Optional<Usuario> findByIdAndIdVendedorJefe(Integer id, Integer idVendedorJefe);
+
     long countByRol(RolUsuario rol);
 }

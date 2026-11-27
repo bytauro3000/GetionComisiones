@@ -54,6 +54,7 @@ public class ProformaService {
     private final EmpresaRepository empresaRepository;
     private final ClienteService clienteService;
     private final EmpresaService empresaService;
+    private final AsociadoService asociadoService;
 
     @Transactional(readOnly = true)
     public List<Proforma> listar() {
@@ -64,15 +65,24 @@ public class ProformaService {
     @Transactional(readOnly = true)
     public List<Proforma> listar(LocalDate desde, LocalDate hasta) {
         Integer idV = TenantContext.idVendedorRequerido();
+        Integer idAsociado = TenantContext.esAsociado()
+                ? TenantContext.idUsuarioActual() : null;
         return proformaRepository.findByIdVendedorOrderByFechaDesc(idV).stream()
+                .filter(p -> idAsociado == null
+                        || idAsociado.equals(p.getIdVendedorAsociado()))
                 .filter(p -> enRango(p, desde, hasta))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public Proforma buscar(Integer id) {
-        return proformaRepository.findByIdAndIdVendedor(id, TenantContext.idVendedorRequerido())
+        Proforma proforma = proformaRepository.findByIdAndIdVendedor(id, TenantContext.idVendedorRequerido())
                 .orElseThrow(() -> new NegocioException("Proforma no encontrada"));
+        if (TenantContext.esAsociado()
+                && !TenantContext.idUsuarioActual().equals(proforma.getIdVendedorAsociado())) {
+            throw new NegocioException("Proforma no encontrada");
+        }
+        return proforma;
     }
 
     /** Carga una proforma por su token público (enlace del PDF, sin login). */
@@ -95,6 +105,8 @@ public class ProformaService {
 
         Proforma proforma = new Proforma();
         proforma.setIdVendedor(idV);
+        proforma.setIdVendedorAsociado(
+                asociadoService.resolverAsociado(dto.getIdVendedorAsociado()));
         proforma.setIdEmpresa(dto.getIdEmpresa());
         proforma.setIdCliente(cliente.getId());
         proforma.setPublicToken(UUID.randomUUID().toString());
@@ -118,6 +130,12 @@ public class ProformaService {
 
         proforma.setIdEmpresa(dto.getIdEmpresa());
         proforma.setIdCliente(cliente.getId());
+        if (TenantContext.esAsociado()) {
+            proforma.setIdVendedorAsociado(TenantContext.idUsuarioActual());
+        } else if (dto.getIdVendedorAsociado() != null) {
+            proforma.setIdVendedorAsociado(
+                    asociadoService.resolverAsociado(dto.getIdVendedorAsociado()));
+        }
         proforma.setObservaciones(limpiar(dto.getObservaciones()));
         aplicarDetalles(proforma, dto, idV); // orphanRemoval: reemplaza los detalles
         return proformaRepository.save(proforma);

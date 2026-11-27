@@ -59,6 +59,12 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
+		<!-- Actualización en tiempo real de las vistas -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+
 		<!-- Generacion de PDF de proformas -->
 		<dependency>
 			<groupId>com.github.librepdf</groupId>

@@ -71,6 +71,11 @@ public class Proyecto implements TenantEntity {
     @Column(name = "plano_ruta")
     private String planoRuta;
 
+    /** Token opaco para el enlace público de solo lectura del plano. */
+    @JsonIgnore
+    @Column(name = "plano_public_token", length = 36)
+    private String planoPublicToken;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, length = 20)
     private EstadoProyecto estado = EstadoProyecto.ACTIVO;

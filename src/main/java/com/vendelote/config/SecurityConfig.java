@@ -47,6 +47,7 @@ public class SecurityConfig {
                     "/api/auth/**",
                     "/api/public/**",
                     "/api/proformas/pdf-publico/**",
+                    "/ws/**",
                     "/actuator/health",
                     "/error"
                 ).permitAll()

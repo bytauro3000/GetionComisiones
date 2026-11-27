@@ -122,6 +122,20 @@ public class ProyectoService {
 
     // ── Plano ─────────────────────────────────────────────────────────────────
 
+    /**
+     * Genera (o reutiliza) el token del enlace público del plano del proyecto.
+     * El token es opaco y no da acceso a escritura.
+     */
+    @Transactional
+    public String obtenerTokenPlanoPublico(Integer id) {
+        Proyecto proyecto = buscar(id);
+        if (proyecto.getPlanoPublicToken() == null || proyecto.getPlanoPublicToken().isBlank()) {
+            proyecto.setPlanoPublicToken(UUID.randomUUID().toString());
+            proyectoRepository.save(proyecto);
+        }
+        return proyecto.getPlanoPublicToken();
+    }
+
     @Transactional
     public void guardarPlano(Integer id, MultipartFile archivo) {
         if (archivo == null || archivo.isEmpty()) {

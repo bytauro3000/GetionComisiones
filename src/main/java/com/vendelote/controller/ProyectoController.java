@@ -1,6 +1,7 @@
 package com.vendelote.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -80,6 +81,18 @@ public class ProyectoController {
         auditoriaService.registrar(AccionAuditoria.ACTUALIZAR, "Proyecto", id,
                 "Plano subido/reemplazado");
         return ResponseEntity.ok(proyectoService.buscar(id));
+    }
+
+    /**
+     * Obtiene (o genera) el token del enlace público de solo lectura del plano.
+     * El frontend arma la URL que se comparte por WhatsApp.
+     */
+    @PostMapping("/{id}/plano-publico")
+    public ResponseEntity<Map<String, String>> obtenerTokenPlanoPublico(@PathVariable Integer id) {
+        String token = proyectoService.obtenerTokenPlanoPublico(id);
+        auditoriaService.registrar(AccionAuditoria.ACTUALIZAR, "Proyecto", id,
+                "Enlace público del plano generado/consultado");
+        return ResponseEntity.ok(Map.of("token", token));
     }
 
     /** Sirve el plano con autenticación (tenant). El frontend lo pide como blob. */

@@ -11,6 +11,8 @@ public interface ProyectoRepository extends JpaRepository<Proyecto, Integer> {
 
     Optional<Proyecto> findByIdAndIdVendedor(Integer id, Integer idVendedor);
 
+    Optional<Proyecto> findByPlanoPublicToken(String planoPublicToken);
+
     List<Proyecto> findByIdVendedorOrderByFechaRegistroDesc(Integer idVendedor);
 
     boolean existsByIdVendedorAndIdEmpresaAndNombre(Integer idVendedor, Integer idEmpresa, String nombre);

@@ -21,8 +21,9 @@ import com.vendelote.entity.Comprobante;
 import com.vendelote.entity.ComprobantePago;
 import com.vendelote.entity.LiquidacionSocio;
 import com.vendelote.entity.PagoComision;
-import com.vendelote.entity.Socio;
+import com.vendelote.entity.Usuario;
 import com.vendelote.enums.EstadoComision;
+import com.vendelote.enums.RolUsuario;
 import com.vendelote.enums.EstadoPago;
 import com.vendelote.enums.TipoPago;
 import com.vendelote.exception.NegocioException;
@@ -32,7 +33,7 @@ import com.vendelote.repository.ComprobantePagoRepository;
 import com.vendelote.repository.ComprobanteRepository;
 import com.vendelote.repository.LiquidacionSocioRepository;
 import com.vendelote.repository.PagoComisionRepository;
-import com.vendelote.repository.SocioRepository;
+import com.vendelote.repository.UsuarioRepository;
 import com.vendelote.security.TenantContext;
 
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LiquidacionSocioService {
 
-    private final SocioRepository socioRepository;
+    private final UsuarioRepository usuarioRepository;
     private final ComisionRepository comisionRepository;
     private final ComisionRepartoRepository repartoRepository;
     private final PagoComisionRepository pagoRepository;
@@ -56,7 +57,14 @@ public class LiquidacionSocioService {
     @Transactional(readOnly = true)
     public List<SaldoSocioDTO> saldos() {
         Integer idV = TenantContext.idVendedorRequerido();
-        List<Socio> socios = socioRepository.findByIdVendedorOrderByNombresAsc(idV);
+        if (TenantContext.esAsociado()) {
+            Integer propio = TenantContext.idUsuarioActual();
+            LiquidacionResumenDTO r = calcular(propio, idV);
+            return List.of(new SaldoSocioDTO(propio, r.getSocioNombre(),
+                    r.getMontoBruto(), r.getMontoLiquidado(), r.getMontoPendiente()));
+        }
+        List<Usuario> socios = usuarioRepository.findByIdVendedorJefeOrderByNombresAsc(idV)
+                .stream().filter(u -> u.getRol() == RolUsuario.VENDEDOR_ASOCIADO).toList();
         return socios.stream().map(s -> {
             LiquidacionResumenDTO r = calcular(s.getId(), idV);
             return new SaldoSocioDTO(s.getId(), r.getSocioNombre(),
@@ -67,17 +75,19 @@ public class LiquidacionSocioService {
     @Transactional(readOnly = true)
     public LiquidacionResumenDTO sugerir(Integer idSocio) {
         Integer idV = TenantContext.idVendedorRequerido();
-        return calcular(idSocio, idV);
+        return calcular(idSocioEfectivo(idSocio), idV);
     }
 
     @Transactional(readOnly = true)
     public List<LiquidacionSocioDTO> listar(Integer idSocio) {
         Integer idV = TenantContext.idVendedorRequerido();
-        List<LiquidacionSocio> lista = idSocio != null
-                ? liquidacionRepository.findByIdVendedorAndIdSocioOrderByFechaRegistroDesc(idV, idSocio)
+        Integer filtro = idSocioEfectivo(idSocio);
+        List<LiquidacionSocio> lista = filtro != null
+                ? liquidacionRepository.findByIdVendedorAndIdSocioOrderByFechaRegistroDesc(idV, filtro)
                 : liquidacionRepository.findByIdVendedorOrderByFechaRegistroDesc(idV);
-        Map<Integer, Socio> socios = socioRepository.findByIdVendedorOrderByNombresAsc(idV).stream()
-                .collect(Collectors.toMap(Socio::getId, Function.identity(), (a, b) -> a));
+        Map<Integer, Usuario> socios = usuarioRepository.findByIdVendedorJefeOrderByNombresAsc(idV)
+                .stream().filter(u -> u.getRol() == RolUsuario.VENDEDOR_ASOCIADO)
+                .collect(Collectors.toMap(Usuario::getId, Function.identity(), (a, b) -> a));
         return lista.stream().map(l -> toDTO(l, socios.get(l.getIdSocio()))).toList();
     }
 
@@ -87,8 +97,9 @@ public class LiquidacionSocioService {
         if (dto.getIdSocio() == null) {
             throw new NegocioException("Debe indicar el socio");
         }
-        Socio socio = socioRepository.findByIdAndIdVendedor(dto.getIdSocio(), idV)
-                .orElseThrow(() -> new NegocioException("Socio no encontrado"));
+        Usuario socio = usuarioRepository.findByIdAndIdVendedorJefe(dto.getIdSocio(), idV)
+                .filter(u -> u.getRol() == RolUsuario.VENDEDOR_ASOCIADO)
+                .orElseThrow(() -> new NegocioException("Vendedor socio no encontrado"));
 
         BigDecimal bruto = monto(dto.getMontoBruto());
         BigDecimal igv = monto(dto.getDescuentoIgv());
@@ -123,8 +134,9 @@ public class LiquidacionSocioService {
     // ── Cálculo ────────────────────────────────────────────────────────────────
 
     private LiquidacionResumenDTO calcular(Integer idSocio, Integer idV) {
-        Socio socio = socioRepository.findByIdAndIdVendedor(idSocio, idV)
-                .orElseThrow(() -> new NegocioException("Socio no encontrado"));
+        Usuario socio = usuarioRepository.findByIdAndIdVendedorJefe(idSocio, idV)
+                .filter(u -> u.getRol() == RolUsuario.VENDEDOR_ASOCIADO)
+                .orElseThrow(() -> new NegocioException("Vendedor socio no encontrado"));
 
         List<Comision> comisiones = comisionRepository.findByIdVendedorOrderByIdDesc(idV);
         Map<Integer, ComisionReparto> repartoPorComision = repartoRepository
@@ -239,6 +251,14 @@ public class LiquidacionSocioService {
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 
+    /** El vendedor socio solo puede consultar su propia liquidación. */
+    private Integer idSocioEfectivo(Integer solicitado) {
+        if (TenantContext.esAsociado()) {
+            return TenantContext.idUsuarioActual();
+        }
+        return solicitado;
+    }
+
     private BigDecimal pct(BigDecimal fraccion) {
         return fraccion == null ? BigDecimal.ZERO : fraccion;
     }
@@ -261,11 +281,11 @@ public class LiquidacionSocioService {
         return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
-    private String nombre(Socio s) {
+    private String nombre(Usuario s) {
         return (s.getNombres() + (s.getApellidos() != null ? " " + s.getApellidos() : "")).trim();
     }
 
-    private LiquidacionSocioDTO toDTO(LiquidacionSocio l, Socio socio) {
+    private LiquidacionSocioDTO toDTO(LiquidacionSocio l, Usuario socio) {
         LiquidacionSocioDTO dto = new LiquidacionSocioDTO();
         dto.setId(l.getId());
         dto.setIdSocio(l.getIdSocio());

@@ -54,6 +54,22 @@ public class VentaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(creada);
     }
 
+    @PostMapping("/{id}/aprobar")
+    public ResponseEntity<VentaDetalleDTO> aprobar(@PathVariable Integer id) {
+        VentaDetalleDTO aprobada = ventaService.aprobar(id);
+        auditoriaService.registrar(AccionAuditoria.ACTUALIZAR, "Venta", id,
+                "Venta aprobada: " + aprobada.getLoteEtiqueta());
+        return ResponseEntity.ok(aprobada);
+    }
+
+    @PostMapping("/{id}/rechazar")
+    public ResponseEntity<VentaDetalleDTO> rechazar(@PathVariable Integer id) {
+        VentaDetalleDTO rechazada = ventaService.rechazar(id);
+        auditoriaService.registrar(AccionAuditoria.ACTUALIZAR, "Venta", id,
+                "Venta rechazada: " + rechazada.getLoteEtiqueta());
+        return ResponseEntity.ok(rechazada);
+    }
+
     @PostMapping("/{id}/anular")
     public ResponseEntity<VentaDetalleDTO> anular(@PathVariable Integer id) {
         VentaDetalleDTO anulada = ventaService.anular(id);

@@ -101,6 +101,14 @@ public class Venta implements TenantEntity {
     @Column(name = "comision_manual", precision = 14, scale = 2)
     private BigDecimal comisionManual;
 
+    /** Override del monto de cada letra (se conserva para generar la comisión al aprobar). */
+    @Column(name = "monto_cuota", precision = 14, scale = 2)
+    private BigDecimal montoCuota;
+
+    /** Override del % del inicial pagado como anticipo (se conserva al aprobar). */
+    @Column(name = "porcentaje_anticipo", precision = 5, scale = 4)
+    private BigDecimal porcentajeAnticipo;
+
     /** fechaVenta + mesesEspera del parámetro vigente (null en CONTADO). */
     @Column(name = "fecha_inicio_cuotas")
     private LocalDate fechaInicioCuotas;

@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vendelote.dto.ComisionRepartoSocioDTO;
 import com.vendelote.dto.ComisionResumenDTO;
 import com.vendelote.dto.PagoComisionDTO;
 import com.vendelote.dto.VentaCrearDTO;
@@ -160,25 +161,7 @@ public class VentaService {
             throw new NegocioException("Todos los lotes deben pertenecer a la misma empresa");
         }
 
-        for (Lote lote : lotes) {
-            if (lote.getEstado() == EstadoLote.VENDIDO) {
-                throw new NegocioException("El lote Mz." + lote.getManzana()
-                        + " Lt." + lote.getNumero() + " ya está vendido");
-            }
-            if (ventaLoteRepository.existsByVenta_IdVendedorAndIdLoteAndVenta_Estado(
-                    idV, lote.getId(), EstadoVenta.ACTIVA)) {
-                throw new NegocioException("El lote Mz." + lote.getManzana()
-                        + " Lt." + lote.getNumero() + " ya tiene una venta activa");
-            }
-            // Separación AJENA vigente (la hizo otro vendedor): no se puede vender.
-            // Las separaciones propias sí permiten cerrar la venta dentro del plazo.
-            if (lote.isSeparacionAjena() && lote.getFechaVinceSeparacion() != null
-                    && !lote.getFechaVinceSeparacion().isBefore(LocalDate.now())) {
-                throw new NegocioException("El lote Mz." + lote.getManzana()
-                        + " Lt." + lote.getNumero() + " está separado por otro vendedor hasta el "
-                        + lote.getFechaVinceSeparacion().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-            }
-        }
+        validarLotesDisponibles(idV, lotes);
 
         List<Cliente> clientes = idsClientes.stream().map(clienteService::buscar).toList();
 
@@ -215,6 +198,8 @@ public class VentaService {
         venta.setMontoInicial(inicial);
         venta.setModalidad(modalidad);
         venta.setComisionManual(dto.getComisionManual());
+        venta.setMontoCuota(dto.getMontoCuota());
+        venta.setPorcentajeAnticipo(dto.getPorcentajeAnticipo());
         venta.setNotas(dto.getNotas());
         if (modalidad == ModalidadVenta.FINANCIADO) {
             venta.setFechaInicioCuotas(dto.getFechaVenta().plusMonths(parametro.getMesesEspera()));
@@ -233,9 +218,19 @@ public class VentaService {
             venta.getClientes().add(ventaCliente);
         }
 
+        // Si la registra un vendedor socio, queda PENDIENTE de aprobación del
+        // jefe: no se genera comisión ni se marca el lote como vendido.
+        boolean requiereAprobacion = TenantContext.esAsociado();
+        venta.setEstado(requiereAprobacion ? EstadoVenta.PENDIENTE : EstadoVenta.ACTIVA);
+
         Venta guardada = ventaRepository.save(venta);
 
-        generarComisionConPagos(guardada, parametro, lotes.get(0).getId(), dto);
+        if (requiereAprobacion) {
+            return detalle(guardada.getId());
+        }
+
+        generarComisionConPagos(guardada, parametro, lotes.get(0).getId(),
+                dto.getMontoCuota(), dto.getPorcentajeAnticipo(), dto.getSocios());
 
         for (Lote lote : lotes) {
             lote.setEstado(EstadoLote.VENDIDO);
@@ -243,6 +238,73 @@ public class VentaService {
         }
 
         return detalle(guardada.getId());
+    }
+
+    /** El jefe confirma una venta registrada por un vendedor socio. */
+    @Transactional
+    public VentaDetalleDTO aprobar(Integer id) {
+        if (!TenantContext.esVendedorJefe()) {
+            throw new NegocioException("Solo el vendedor jefe puede aprobar ventas");
+        }
+        Venta venta = buscar(id);
+        if (venta.getEstado() != EstadoVenta.PENDIENTE) {
+            throw new NegocioException("La venta no está pendiente de aprobación");
+        }
+
+        List<Lote> lotes = venta.getLotes().stream()
+                .map(vl -> loteService.buscar(vl.getIdLote())).toList();
+        validarLotesDisponibles(venta.getIdVendedor(), lotes);
+
+        ParametroComision parametro = parametroService.resolver(venta.getIdEmpresa());
+        venta.setEstado(EstadoVenta.ACTIVA);
+        ventaRepository.save(venta);
+
+        generarComisionConPagos(venta, parametro, lotes.get(0).getId(),
+                venta.getMontoCuota(), venta.getPorcentajeAnticipo(), null);
+
+        for (Lote lote : lotes) {
+            lote.setEstado(EstadoLote.VENDIDO);
+            loteRepository.save(lote);
+        }
+        return detalle(venta.getId());
+    }
+
+    /** El jefe rechaza una venta pendiente; no genera comisión. */
+    @Transactional
+    public VentaDetalleDTO rechazar(Integer id) {
+        if (!TenantContext.esVendedorJefe()) {
+            throw new NegocioException("Solo el vendedor jefe puede rechazar ventas");
+        }
+        Venta venta = buscar(id);
+        if (venta.getEstado() != EstadoVenta.PENDIENTE) {
+            throw new NegocioException("La venta no está pendiente de aprobación");
+        }
+        venta.setEstado(EstadoVenta.RECHAZADA);
+        ventaRepository.save(venta);
+        return detalle(venta.getId());
+    }
+
+    /** Valida que los lotes estén disponibles (ni vendidos ni con venta activa). */
+    private void validarLotesDisponibles(Integer idV, List<Lote> lotes) {
+        for (Lote lote : lotes) {
+            if (lote.getEstado() == EstadoLote.VENDIDO) {
+                throw new NegocioException("El lote Mz." + lote.getManzana()
+                        + " Lt." + lote.getNumero() + " ya está vendido");
+            }
+            if (ventaLoteRepository.existsByVenta_IdVendedorAndIdLoteAndVenta_Estado(
+                    idV, lote.getId(), EstadoVenta.ACTIVA)) {
+                throw new NegocioException("El lote Mz." + lote.getManzana()
+                        + " Lt." + lote.getNumero() + " ya tiene una venta activa");
+            }
+            // Separación AJENA vigente (la hizo otro vendedor): no se puede vender.
+            // Las separaciones propias sí permiten cerrar la venta dentro del plazo.
+            if (lote.isSeparacionAjena() && lote.getFechaVinceSeparacion() != null
+                    && !lote.getFechaVinceSeparacion().isBefore(LocalDate.now())) {
+                throw new NegocioException("El lote Mz." + lote.getManzana()
+                        + " Lt." + lote.getNumero() + " está separado por otro vendedor hasta el "
+                        + lote.getFechaVinceSeparacion().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            }
+        }
     }
 
     /** Anula la venta (solo si la comisión no tiene pagos) y libera el lote. */
@@ -300,7 +362,9 @@ public class VentaService {
     // ── Generación de comisión + pagos ─────────────────────────────────────────
 
     private void generarComisionConPagos(Venta venta, ParametroComision parametro,
-                                         Integer idPrimerLote, VentaCrearDTO dto) {
+                                         Integer idPrimerLote, BigDecimal montoCuotaOverride,
+                                         BigDecimal porcentajeAnticipoOverride,
+                                         List<ComisionRepartoSocioDTO> repartos) {
         boolean contado = venta.getModalidad() == ModalidadVenta.CONTADO;
         BigDecimal porcentaje = contado
                 ? parametro.getPorcentajeComisionContado()
@@ -317,15 +381,15 @@ public class VentaService {
         }
 
         // Monto de cada letra (override por venta o parámetro).
-        BigDecimal montoCuota = dto.getMontoCuota() != null
-                ? dto.getMontoCuota()
+        BigDecimal montoCuota = montoCuotaOverride != null
+                ? montoCuotaOverride
                 : parametro.getMontoCuota();
 
         // % del inicial del cliente aplicado al anticipo (override o parámetro).
         BigDecimal porcentajeAnticipo = contado ? null
                 : (parametro.getAnticipoMontoFijo() != null ? null
-                        : (dto.getPorcentajeAnticipo() != null
-                                ? dto.getPorcentajeAnticipo()
+                        : (porcentajeAnticipoOverride != null
+                                ? porcentajeAnticipoOverride
                                 : parametro.getAnticipoPorcentaje()));
 
         Comision comision = new Comision();
@@ -354,7 +418,7 @@ public class VentaService {
                 pagos.add(nuevoPago(venta, TipoPago.TOTAL, total, venta.getFechaVenta(), null));
             }
         } else {
-            BigDecimal anticipo = calcularAnticipo(venta, parametro, total, dto.getPorcentajeAnticipo());
+            BigDecimal anticipo = calcularAnticipo(venta, parametro, total, porcentajeAnticipoOverride);
             BigDecimal saldo = total.subtract(anticipo);
             comision.setMontoAnticipo(anticipo);
             comision.setMontoSaldo(saldo);
@@ -391,10 +455,23 @@ public class VentaService {
             pagoRepository.save(pago);
         }
 
-        // Reparto con socios (si se informó). En CONTADO el "inicial" es el TOTAL.
+        // Reparto con socios. Si no se detalló, pero la venta está atribuida a
+        // un vendedor socio, se crea automáticamente el 50/50 (jefe + socio).
+        // En CONTADO el "inicial" es el TOTAL.
         BigDecimal cuotaBase = guardada.getCantidadCuotas() != null && guardada.getCantidadCuotas() > 0
                 ? montoCuota : null;
-        repartoService.reemplazar(guardada, dto.getSocios(), inicialTotal, cuotaBase);
+        List<ComisionRepartoSocioDTO> repartosCalc = repartos;
+        if ((repartosCalc == null || repartosCalc.isEmpty())
+                && guardada.getIdVendedorAsociado() != null) {
+            ComisionRepartoSocioDTO auto = new ComisionRepartoSocioDTO();
+            auto.setIdSocio(guardada.getIdVendedorAsociado());
+            auto.setParticipaInicial(true);
+            auto.setPorcentajeInicial(new BigDecimal("0.50"));
+            auto.setParticipaCuotas(true);
+            auto.setPorcentajeCuotas(new BigDecimal("0.50"));
+            repartosCalc = List.of(auto);
+        }
+        repartoService.reemplazar(guardada, repartosCalc, inicialTotal, cuotaBase);
     }
 
     /**

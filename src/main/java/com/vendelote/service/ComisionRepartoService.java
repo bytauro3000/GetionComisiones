@@ -17,10 +17,11 @@ import com.vendelote.dto.ComisionRepartoDTO;
 import com.vendelote.dto.ComisionRepartoSocioDTO;
 import com.vendelote.entity.Comision;
 import com.vendelote.entity.ComisionReparto;
-import com.vendelote.entity.Socio;
+import com.vendelote.entity.Usuario;
+import com.vendelote.enums.RolUsuario;
 import com.vendelote.exception.NegocioException;
 import com.vendelote.repository.ComisionRepartoRepository;
-import com.vendelote.repository.SocioRepository;
+import com.vendelote.repository.UsuarioRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,7 +38,7 @@ public class ComisionRepartoService {
 
     private static final BigDecimal TOLERANCIA = new BigDecimal("0.01");
 
-    private final SocioRepository socioRepository;
+    private final UsuarioRepository usuarioRepository;
     private final ComisionRepartoRepository repartoRepository;
 
     /** Reemplaza el reparto de la comisión validando montos y sumas. */
@@ -66,8 +67,9 @@ public class ComisionRepartoService {
             if (!vistos.add(dto.getIdSocio())) {
                 throw new NegocioException("El socio está repetido en el reparto");
             }
-            Socio socio = socioRepository.findByIdAndIdVendedor(dto.getIdSocio(), idV)
-                    .orElseThrow(() -> new NegocioException("Socio no encontrado"));
+            Usuario socio = usuarioRepository.findByIdAndIdVendedorJefe(dto.getIdSocio(), idV)
+                    .filter(u -> u.getRol() == RolUsuario.VENDEDOR_ASOCIADO)
+                    .orElseThrow(() -> new NegocioException("Vendedor socio no encontrado"));
 
             ComisionReparto fila = new ComisionReparto();
             fila.setIdVendedor(idV);
@@ -131,12 +133,12 @@ public class ComisionRepartoService {
         if (filas.isEmpty()) {
             return List.of();
         }
-        Map<Integer, Socio> socios = socioRepository
+        Map<Integer, Usuario> socios = usuarioRepository
                 .findAllById(filas.stream().map(ComisionReparto::getIdSocio).toList())
-                .stream().collect(Collectors.toMap(Socio::getId, Function.identity(), (a, b) -> a));
+                .stream().collect(Collectors.toMap(Usuario::getId, Function.identity(), (a, b) -> a));
 
         return filas.stream().map(r -> {
-            Socio s = socios.get(r.getIdSocio());
+            Usuario s = socios.get(r.getIdSocio());
             String nombre = s == null ? "Socio" :
                     (s.getNombres() + (s.getApellidos() != null ? " " + s.getApellidos() : "")).trim();
             return new ComisionRepartoDTO(
